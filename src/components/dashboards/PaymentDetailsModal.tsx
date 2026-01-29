@@ -63,7 +63,17 @@ const PaymentDetailsModal: React.FC<PaymentDetailsModalProps> = ({ isOpen, onClo
         if (!window.confirm('Are you sure you want to cancel this subscription? This action cannot be undone.')) return;
 
         setIsCancelling(true);
+        console.log('Attempting to cancel subscription:', payment);
+
+        if (!payment.onePipePaymentId) {
+            console.error('Missing onePipePaymentId for cancellation');
+            toast.error('Cannot cancel: Payment ID (OnePipe) is missing');
+            setIsCancelling(false);
+            return;
+        }
+
         try {
+            console.log(`Sending cancellation request to: /payments/${payment.onePipePaymentId}/cancel`);
             await axiosInstance.post(`/payments/${payment.onePipePaymentId}/cancel`);
             alert('Subscription cancelled successfully');
             if (onCancelSuccess) onCancelSuccess();
