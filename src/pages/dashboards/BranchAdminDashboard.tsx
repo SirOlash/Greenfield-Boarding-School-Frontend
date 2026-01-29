@@ -293,7 +293,7 @@ const BranchAdminDashboard: React.FC = () => {
               <CardContent className="p-6">
                 <p className="text-sm text-muted-foreground">Pending Payments</p>
                 <p className="text-2xl font-bold text-amber-500 mt-1">
-                  {payments.filter(p => p.status.toUpperCase() === 'PENDING').length}
+                  {students.filter(s => s.status.toUpperCase() === 'PENDING').length}
                 </p>
               </CardContent>
             </Card>
@@ -301,7 +301,7 @@ const BranchAdminDashboard: React.FC = () => {
               <CardContent className="p-6">
                 <p className="text-sm text-muted-foreground">Active Subscriptions</p>
                 <p className="text-2xl font-bold text-blue-500 mt-1">
-                  {payments.filter(p => p.status.toUpperCase() === 'ACTIVE').length}
+                  {students.filter(s => s.status.toUpperCase() === 'ACTIVE').length}
                 </p>
               </CardContent>
             </Card>
@@ -309,7 +309,7 @@ const BranchAdminDashboard: React.FC = () => {
               <CardContent className="p-6">
                 <p className="text-sm text-muted-foreground">Completed</p>
                 <p className="text-2xl font-bold text-primary mt-1">
-                  {payments.filter(p => p.status.toUpperCase() === 'COMPLETED').length}
+                  {students.filter(s => s.status.toUpperCase() === 'SUCCESSFUL').length}
                 </p>
               </CardContent>
             </Card>
