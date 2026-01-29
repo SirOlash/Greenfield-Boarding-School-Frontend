@@ -35,7 +35,7 @@ const Index: React.FC = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      
+
       {/* Hero Section */}
       <HeroSlider />
 
@@ -99,7 +99,7 @@ const Index: React.FC = () => {
                 Simplified Payment Experience
               </h2>
               <p className="text-muted-foreground mb-8">
-                Our digital platform makes paying school fees easier than ever. 
+                Our digital platform makes paying school fees easier than ever.
                 Register your child and get a virtual account instantly.
               </p>
 
@@ -130,7 +130,7 @@ const Index: React.FC = () => {
                   </p>
                   <div className="bg-primary-foreground/20 rounded-xl p-4">
                     <p className="text-sm opacity-80">Admission Open For</p>
-                    <p className="text-xl font-bold">2024/2025 Session</p>
+                    <p className="text-xl font-bold">2025/2026 Session</p>
                   </div>
                 </div>
               </div>
