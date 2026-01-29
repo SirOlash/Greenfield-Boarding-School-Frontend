@@ -20,6 +20,7 @@ import axiosInstance from '@/lib/axiosConfig';
 import { formatNaira } from '@/lib/feeConfig';
 import PaymentDetailsModal, { PaymentDetails } from '@/components/dashboards/PaymentDetailsModal';
 import CreatePaymentModal from '@/components/dashboards/CreatePaymentModal';
+import { usePaymentPolling } from '@/hooks/usePaymentPolling';
 
 interface Student {
   id: number;
@@ -50,9 +51,32 @@ const BranchAdminDashboard: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
+  // Sync selected payment data when polling refreshes the list
+  useEffect(() => {
+    if (isModalOpen && selectedPayment) {
+      const sourceList = isDetailView ? studentPayments : payments;
+      const updated = sourceList.find(p => p.id === (selectedPayment as any).id);
+      if (updated && (updated.status !== selectedPayment.status || updated.completedPayments !== selectedPayment.completedPayments)) {
+        setSelectedPayment(updated);
+      }
+    }
+  }, [payments, studentPayments, isModalOpen, isDetailView]);
+
   useEffect(() => {
     fetchData();
   }, [user?.branchId]);
+
+  // Determine if we should poll for updates
+  const hasUpdatesNeeded = payments.some(p => ['PENDING', 'ACTIVE'].includes(p.status.toUpperCase()));
+
+  // Poll for updates every 5 seconds if there are pending/active payments
+  usePaymentPolling(() => {
+    if (isDetailView && selectedStudent) {
+      fetchStudentPayments(selectedStudent.id);
+    } else {
+      fetchData();
+    }
+  }, hasUpdatesNeeded);
 
   const fetchData = async () => {
     try {

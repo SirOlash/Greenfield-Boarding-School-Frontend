@@ -11,6 +11,7 @@ import axiosInstance from '@/lib/axiosConfig';
 import { formatNaira } from '@/lib/feeConfig';
 import PaymentDetailsModal, { PaymentDetails } from '@/components/dashboards/PaymentDetailsModal';
 import CreatePaymentModal from '@/components/dashboards/CreatePaymentModal';
+import { usePaymentPolling } from '@/hooks/usePaymentPolling';
 
 interface Child {
   id: number;
@@ -33,9 +34,32 @@ const ParentDashboard: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
+  // Sync selected payment data when polling refreshes the list
+  useEffect(() => {
+    if (isModalOpen && selectedPayment) {
+      const updated = payments.find(p => p.id === selectedPayment.id);
+      if (updated && (updated.status !== selectedPayment.status || updated.completedPayments !== selectedPayment.completedPayments)) {
+        setSelectedPayment(updated);
+      }
+    }
+  }, [payments, isModalOpen]);
+
   useEffect(() => {
     fetchChildren();
   }, [user?.email]);
+
+  // Determine if we should poll for updates
+  const hasUpdatesNeeded = children.some(c => (c.pendingAmount || 0) > 0) ||
+    payments.some(p => ['PENDING', 'ACTIVE'].includes(p.status.toUpperCase()));
+
+  // Poll for updates every 5 seconds if there are pending/active payments
+  usePaymentPolling(() => {
+    if (isDetailView && selectedChild) {
+      fetchPayments(selectedChild.id);
+    } else {
+      fetchChildren();
+    }
+  }, hasUpdatesNeeded);
 
   const fetchChildren = async () => {
     try {
