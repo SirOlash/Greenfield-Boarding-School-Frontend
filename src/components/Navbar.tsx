@@ -37,7 +37,7 @@ const Navbar: React.FC = () => {
             <div className="w-10 h-10 bg-gradient-hero rounded-xl flex items-center justify-center shadow-button">
               <GraduationCap className="w-6 h-6 text-primary-foreground" />
             </div>
-            <span className="text-xl font-bold text-gradient">Greenfield</span>
+            <span className="text-xl font-bold text-gradient">Greenfield Boarding School</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -48,7 +48,7 @@ const Navbar: React.FC = () => {
             <Link to="/register" className="text-muted-foreground hover:text-foreground transition-colors">
               Enroll Now
             </Link>
-            
+
             {isAuthenticated ? (
               <div className="flex items-center gap-4">
                 <Link to={getDashboardLink()}>
@@ -97,7 +97,7 @@ const Navbar: React.FC = () => {
               >
                 Enroll Now
               </Link>
-              
+
               {isAuthenticated ? (
                 <>
                   <Link to={getDashboardLink()} onClick={() => setIsMenuOpen(false)}>

@@ -9,7 +9,7 @@ interface Slide {
 
 const slides: Slide[] = [
   {
-    image: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=1920&q=80',
+    image: '/istockphoto-1770728228-612x612.jpg',
     title: 'Welcome to Greenfield',
     subtitle: 'Nurturing Future Leaders Through Excellence in Education',
   },
@@ -53,9 +53,8 @@ const HeroSlider: React.FC = () => {
       {slides.map((slide, index) => (
         <div
           key={index}
-          className={`absolute inset-0 transition-opacity duration-1000 ${
-            index === currentSlide ? 'opacity-100' : 'opacity-0'
-          }`}
+          className={`absolute inset-0 transition-opacity duration-1000 ${index === currentSlide ? 'opacity-100' : 'opacity-0'
+            }`}
         >
           {/* Background Image */}
           <div
@@ -64,7 +63,7 @@ const HeroSlider: React.FC = () => {
           />
           {/* Dark Overlay with Gradient */}
           <div className="absolute inset-0 bg-gradient-to-b from-dark-900/70 via-dark-900/50 to-dark-900/80" />
-          
+
           {/* Content */}
           <div className="relative z-10 h-full flex items-center justify-center">
             <div className="text-center px-4 max-w-4xl mx-auto">
@@ -99,11 +98,10 @@ const HeroSlider: React.FC = () => {
           <button
             key={index}
             onClick={() => goToSlide(index)}
-            className={`w-3 h-3 rounded-full transition-all ${
-              index === currentSlide
-                ? 'bg-primary w-8'
-                : 'bg-primary-foreground/50 hover:bg-primary-foreground/75'
-            }`}
+            className={`w-3 h-3 rounded-full transition-all ${index === currentSlide
+              ? 'bg-primary w-8'
+              : 'bg-primary-foreground/50 hover:bg-primary-foreground/75'
+              }`}
           />
         ))}
       </div>
