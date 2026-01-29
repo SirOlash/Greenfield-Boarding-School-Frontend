@@ -77,9 +77,13 @@ const PaymentDetailsModal: React.FC<PaymentDetailsModalProps> = ({ isOpen, onClo
     };
 
     const handleQueryStatus = async () => {
+        if (!payment.onePipePaymentId) {
+            toast.error('Payment ID missing');
+            return;
+        }
         setIsQuerying(true);
         try {
-            const response = await axiosInstance.post(`/payments/${payment.id}/query`);
+            const response = await axiosInstance.post(`/payments/${payment.onePipePaymentId}/query`);
             toast.success(`Payment status updated to ${response.data.status}`);
             // Success call onCancelSuccess to refresh parent dashboard data
             if (onCancelSuccess) onCancelSuccess();
@@ -102,10 +106,8 @@ const PaymentDetailsModal: React.FC<PaymentDetailsModalProps> = ({ isOpen, onClo
         switch (status) {
             case 'PENDING': return <Clock className="w-5 h-5 text-amber-500" />;
             case 'ACTIVE': return <CreditCard className="w-5 h-5 text-blue-500" />;
-            case 'SUCCESSFUL':
-            case 'SUCCESS':
-            case 'PAID':
-            case 'COMPLETED': return <CheckCircle className="w-5 h-5 text-primary" />;
+            case 'SUCCESSFUL': return <CheckCircle className="w-5 h-5 text-primary" />;
+            case 'FAILED':
             case 'CANCELLED': return <XCircle className="w-5 h-5 text-destructive" />;
             default: return null;
         }
@@ -115,10 +117,8 @@ const PaymentDetailsModal: React.FC<PaymentDetailsModalProps> = ({ isOpen, onClo
         switch (status) {
             case 'PENDING': return <Badge variant="pending">Pending</Badge>;
             case 'ACTIVE': return <Badge variant="active">Active</Badge>;
-            case 'SUCCESSFUL':
-            case 'SUCCESS':
-            case 'PAID':
-            case 'COMPLETED': return <Badge variant="success">Completed</Badge>;
+            case 'SUCCESSFUL': return <Badge variant="success">Successful</Badge>;
+            case 'FAILED': return <Badge variant="destructive">Failed</Badge>;
             case 'CANCELLED': return <Badge variant="destructive">Cancelled</Badge>;
             default: return <Badge variant="outline">{status}</Badge>;
         }

@@ -38,12 +38,13 @@ const PaymentSuccessCard: React.FC<PaymentSuccessCardProps> = ({
 
   // Poll for status every 5 seconds
   usePaymentPolling(async () => {
+    if (!paymentDetails.onePipePaymentId) return;
     try {
       setIsVerifying(true);
-      const response = await axiosInstance.post(`/payments/${paymentId}/query`);
+      const response = await axiosInstance.post(`/payments/${paymentDetails.onePipePaymentId}/query`);
       const status = response.data.status?.toUpperCase();
 
-      if (['ACTIVE', 'SUCCESS', 'COMPLETED', 'SUCCESSFUL', 'PAID'].includes(status)) {
+      if (['ACTIVE', 'SUCCESSFUL'].includes(status)) {
         toast.success('Payment successfully confirmed! Redirecting to login...');
         setTimeout(() => {
           navigate('/login');

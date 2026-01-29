@@ -135,10 +135,8 @@ const BranchAdminDashboard: React.FC = () => {
     switch (s) {
       case 'PENDING': return <Badge variant="pending">Pending</Badge>;
       case 'ACTIVE': return <Badge variant="active">Active</Badge>;
-      case 'SUCCESSFUL':
-      case 'SUCCESS':
-      case 'PAID':
-      case 'COMPLETED': return <Badge variant="success">Completed</Badge>;
+      case 'SUCCESSFUL': return <Badge variant="success">Successful</Badge>;
+      case 'FAILED': return <Badge variant="destructive">Failed</Badge>;
       case 'CANCELLED': return <Badge variant="destructive">Cancelled</Badge>;
       default: return <Badge variant="outline">{status}</Badge>;
     }
@@ -147,7 +145,7 @@ const BranchAdminDashboard: React.FC = () => {
   if (isLoading) return <LoadingScreen />;
 
   const pendingActivePayments = studentPayments.filter(p => ['PENDING', 'ACTIVE'].includes(p.status.toUpperCase()));
-  const historyPayments = studentPayments.filter(p => ['COMPLETED', 'CANCELLED', 'SUCCESSFUL', 'SUCCESS', 'PAID'].includes(p.status.toUpperCase()));
+  const historyPayments = studentPayments.filter(p => ['SUCCESSFUL', 'FAILED', 'CANCELLED'].includes(p.status.toUpperCase()));
 
   return (
     <DashboardLayout title="Branch Dashboard">
