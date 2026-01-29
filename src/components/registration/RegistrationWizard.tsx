@@ -36,6 +36,8 @@ interface PaymentResponse {
   studentName: string;
   parentName: string;
   paymentDetails: {
+    id: number;
+    onePipePaymentId: string;
     amount: number;
     downPayment?: number;
     paymentType: string;

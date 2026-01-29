@@ -1,11 +1,16 @@
-import React, { useState } from 'react';
-import { Copy, Check, Download, Home, LogIn, Mail, MessageSquare } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Copy, Check, Download, Home, LogIn, Mail, MessageSquare, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { formatNaira } from '@/lib/feeConfig';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import axiosInstance from '@/lib/axiosConfig';
+import { usePaymentPolling } from '@/hooks/usePaymentPolling';
+import { toast } from 'sonner';
 
 interface PaymentDetails {
+  id: number;
+  onePipePaymentId: string;
   amount: number;
   bankName: string;
   accountNumber: string;
@@ -26,8 +31,30 @@ const PaymentSuccessCard: React.FC<PaymentSuccessCardProps> = ({
   studentName,
   paymentDetails,
 }) => {
-  const { paymentType, downPayment } = paymentDetails;
+  const { paymentType, downPayment, id: paymentId } = paymentDetails;
   const [copied, setCopied] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const navigate = useNavigate();
+
+  // Poll for status every 5 seconds
+  usePaymentPolling(async () => {
+    try {
+      setIsVerifying(true);
+      const response = await axiosInstance.post(`/payments/${paymentId}/query`);
+      const status = response.data.status?.toUpperCase();
+
+      if (['ACTIVE', 'SUCCESS', 'COMPLETED'].includes(status)) {
+        toast.success('Payment successfully confirmed! Redirecting to login...');
+        setTimeout(() => {
+          navigate('/login');
+        }, 2000);
+      }
+    } catch (error) {
+      console.error('Polling error:', error);
+    } finally {
+      setIsVerifying(false);
+    }
+  }, true); // Always enabled when this card is shown
 
   // Normalize payment type for easier comparison
   const normalizedType = (paymentType || '').toUpperCase();
@@ -95,7 +122,12 @@ Please transfer the exact amount from your account (${paymentDetails.customerAcc
 
         <CardContent className="p-6 space-y-6">
           {/* Amount */}
-          <div className="text-center py-4 bg-secondary rounded-xl">
+          <div className="text-center py-4 bg-secondary rounded-xl relative overflow-hidden">
+            {isVerifying && (
+              <div className="absolute top-2 right-2">
+                <Loader2 className="w-3 h-3 text-primary animate-spin" />
+              </div>
+            )}
             <p className="text-sm text-muted-foreground mb-1">
               {isSingle ? 'Total Amount to Pay' : 'Initial Payment to Make'}
             </p>

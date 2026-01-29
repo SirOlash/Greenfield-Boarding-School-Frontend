@@ -11,6 +11,9 @@ import { Badge } from '@/components/ui/badge';
 import { Copy, Check, QrCode, Clock, CreditCard, CheckCircle, XCircle, Loader2, AlertCircle } from 'lucide-react';
 import { formatNaira } from '@/lib/feeConfig';
 import axiosInstance from '@/lib/axiosConfig';
+import { RefreshCcw } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 
 export interface PaymentDetails {
     id: number;
@@ -41,8 +44,12 @@ interface PaymentDetailsModalProps {
 }
 
 const PaymentDetailsModal: React.FC<PaymentDetailsModalProps> = ({ isOpen, onClose, payment, onCancelSuccess }) => {
+    const { user } = useAuth();
     const [copied, setCopied] = useState(false);
     const [isCancelling, setIsCancelling] = useState(false);
+    const [isQuerying, setIsQuerying] = useState(false);
+
+    const isBranchAdmin = user?.role === 'BRANCH_ADMIN';
 
     if (!payment) return null;
 
@@ -66,6 +73,21 @@ const PaymentDetailsModal: React.FC<PaymentDetailsModalProps> = ({ isOpen, onClo
             alert('Failed to cancel subscription. Please try again.');
         } finally {
             setIsCancelling(false);
+        }
+    };
+
+    const handleQueryStatus = async () => {
+        setIsQuerying(true);
+        try {
+            const response = await axiosInstance.post(`/payments/${payment.id}/query`);
+            toast.success(`Payment status updated to ${response.data.status}`);
+            // Success call onCancelSuccess to refresh parent dashboard data
+            if (onCancelSuccess) onCancelSuccess();
+        } catch (error) {
+            console.error('Failed to query payment status', error);
+            toast.error('Failed to update status');
+        } finally {
+            setIsQuerying(false);
         }
     };
 
@@ -244,6 +266,17 @@ const PaymentDetailsModal: React.FC<PaymentDetailsModalProps> = ({ isOpen, onClo
                             >
                                 {isCancelling ? <Loader2 className="w-4 h-4 animate-spin" /> : <AlertCircle className="w-4 h-4" />}
                                 Cancel Subscription
+                            </Button>
+                        )}
+                        {isBranchAdmin && (
+                            <Button
+                                variant="secondary"
+                                className="w-full gap-2"
+                                onClick={handleQueryStatus}
+                                disabled={isQuerying}
+                            >
+                                {isQuerying ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCcw className="w-4 h-4" />}
+                                Query Status
                             </Button>
                         )}
                         <Button variant="outline" className="w-full" onClick={onClose}>
