@@ -43,7 +43,7 @@ const PaymentSuccessCard: React.FC<PaymentSuccessCardProps> = ({
       const response = await axiosInstance.post(`/payments/${paymentId}/query`);
       const status = response.data.status?.toUpperCase();
 
-      if (['ACTIVE', 'SUCCESS', 'COMPLETED'].includes(status)) {
+      if (['ACTIVE', 'SUCCESS', 'COMPLETED', 'SUCCESSFUL', 'PAID'].includes(status)) {
         toast.success('Payment successfully confirmed! Redirecting to login...');
         setTimeout(() => {
           navigate('/login');
