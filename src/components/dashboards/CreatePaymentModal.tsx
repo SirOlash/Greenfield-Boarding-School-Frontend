@@ -56,7 +56,7 @@ const CreatePaymentModal: React.FC<CreatePaymentModalProps> = ({
             await axiosInstance.post('/payments/new', {
                 studentId,
                 category: 'ADHOC_PAYMENT',
-                amount: 500, // Changed from 400 to 500 as requested
+                amount: 300,
                 paymentType: 'SINGLE_PAYMENT',
                 description: selectedCategory?.label || 'Ad-hoc Payment'
             });
@@ -100,7 +100,7 @@ const CreatePaymentModal: React.FC<CreatePaymentModalProps> = ({
                     <div className="p-4 bg-muted rounded-xl flex items-center justify-between">
                         <div>
                             <p className="text-xs text-muted-foreground">Fixed Amount</p>
-                            <p className="text-xl font-bold text-primary">{formatNaira(500)}</p>
+                            <p className="text-xl font-bold text-primary">{formatNaira(300)}</p>
                         </div>
                         <div className="text-right">
                             <p className="text-xs text-muted-foreground">Payment Type</p>

@@ -64,7 +64,7 @@ const PaymentDetailsModal: React.FC<PaymentDetailsModalProps> = ({ isOpen, onClo
 
         setIsCancelling(true);
         try {
-            await axiosInstance.post(`/payments/${payment.id}/cancel`);
+            await axiosInstance.post(`/payments/${payment.onePipePaymentId}/cancel`);
             alert('Subscription cancelled successfully');
             if (onCancelSuccess) onCancelSuccess();
             onClose();
