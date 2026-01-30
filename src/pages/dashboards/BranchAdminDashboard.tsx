@@ -98,7 +98,7 @@ const BranchAdminDashboard: React.FC = () => {
   const fetchStudentPayments = async (studentId: number) => {
     try {
       const response = await axiosInstance.get<PaymentDetails[]>(`/payments?studentId=${studentId}`);
-      console.log('API Response (BranchAdmin -> fetchStudentPayments):', response.data);
+      // console.log('API Response (BranchAdmin -> fetchStudentPayments):', response.data);
       setStudentPayments(response.data);
     } catch (error) {
       console.log('Failed to fetch student payments');
