@@ -9,6 +9,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 import LoadingScreen from '@/components/LoadingScreen';
 import axiosInstance from '@/lib/axiosConfig';
 import { formatNaira } from '@/lib/feeConfig';
+import { PaymentDetails } from '@/components/dashboards/PaymentDetailsModal';
 
 interface Branch {
   id: number;
@@ -49,6 +50,7 @@ interface DashboardStats {
 const SuperAdminDashboard: React.FC = () => {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [payments, setPayments] = useState<PaymentDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [formData, setFormData] = useState<BranchFormData>({
@@ -68,7 +70,7 @@ const SuperAdminDashboard: React.FC = () => {
   });
 
   useEffect(() => {
-    Promise.all([fetchBranches(), fetchStats()]).finally(() => setIsLoading(false));
+    Promise.all([fetchBranches(), fetchStats(), fetchPayments()]).finally(() => setIsLoading(false));
   }, []);
 
   const fetchStats = async () => {
@@ -88,6 +90,36 @@ const SuperAdminDashboard: React.FC = () => {
       console.error('Failed to fetch branches');
       setBranches([]);
     }
+  };
+
+  const fetchPayments = async () => {
+    try {
+      const response = await axiosInstance.get<PaymentDetails[]>('/payments');
+      setPayments(response.data);
+    } catch (error) {
+      console.error('Failed to fetch payments');
+      setPayments([]);
+    }
+  };
+
+  const calculateTotalRevenue = () => {
+    const baseRevenue = stats?.totalRevenue || 0;
+    const additionalRevenue = payments.reduce((acc, payment) => {
+      const status = payment.status?.toUpperCase();
+      const type = payment.paymentType?.toUpperCase();
+
+      if (status === 'ACTIVE') {
+        if (type === 'INSTALLMENT') {
+          return acc + (payment.downPayment || 0);
+        } else if (type === 'SUBSCRIPTION') {
+          // For subscriptions, add the first payment amount
+          return acc + (payment.amount || 0);
+        }
+      }
+      return acc;
+    }, 0);
+
+    return baseRevenue + additionalRevenue;
   };
 
   const handleCreateBranch = async (e: React.FormEvent) => {
@@ -172,7 +204,7 @@ const SuperAdminDashboard: React.FC = () => {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Total Revenue</p>
-                <p className="text-2xl font-bold text-foreground mt-1">{formatNaira(stats?.totalRevenue || 0)}</p>
+                <p className="text-2xl font-bold text-foreground mt-1">{formatNaira(calculateTotalRevenue())}</p>
               </div>
               <div className="w-12 h-12 bg-secondary rounded-xl flex items-center justify-center">
                 <CreditCard className="w-6 h-6 text-primary" />
