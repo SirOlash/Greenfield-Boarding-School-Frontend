@@ -4,12 +4,12 @@
 // ============================================
 
 export const SCHOOL_FEES: Record<string, number> = {
-  JSS1: 1000,
-  JSS2: 1000,
-  JSS3: 1000,
-  SS1: 1000,
-  SS2: 1000,
-  SS3: 1000,
+  JSS1: 500,
+  JSS2: 500,
+  JSS3: 500,
+  SS1: 500,
+  SS2: 500,
+  SS3: 500,
 };
 
 // Installment configuration
