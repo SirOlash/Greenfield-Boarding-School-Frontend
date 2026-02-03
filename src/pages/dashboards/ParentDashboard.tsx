@@ -170,11 +170,13 @@ const ParentDashboard: React.FC = () => {
 
     setIsGeneratingInvoice(true);
     try {
+      const paymentType = (selectedChild as any).paymentType === 'SINGLE' ? 'SINGLE_PAYMENT' : ((selectedChild as any).paymentType || 'SINGLE_PAYMENT');
+
       const payload: PaymentRequest = {
         studentId: selectedChild.id,
         category: 'SCHOOL_FEES',
         amount: 500, // Fixed amount as per requirements
-        paymentType: (selectedChild as any).paymentType || 'SINGLE', // Attempt to get from child, fallback to SINGLE
+        paymentType: paymentType,
         description: 'School Fees Payment'
       };
 

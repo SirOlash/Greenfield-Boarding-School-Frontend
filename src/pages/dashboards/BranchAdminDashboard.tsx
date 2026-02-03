@@ -162,11 +162,13 @@ const BranchAdminDashboard: React.FC = () => {
 
     setIsGeneratingInvoice(true);
     try {
+      const paymentType = selectedStudent.paymentType === 'SINGLE' ? 'SINGLE_PAYMENT' : (selectedStudent.paymentType || 'SINGLE_PAYMENT');
+
       const payload: PaymentRequest = {
         studentId: selectedStudent.id,
         category: 'SCHOOL_FEES',
         amount: 500,
-        paymentType: selectedStudent.paymentType || 'SINGLE',
+        paymentType: paymentType,
         description: 'School Fees Payment'
       };
 
