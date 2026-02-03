@@ -55,7 +55,10 @@ const BranchAdminDashboard: React.FC = () => {
   useEffect(() => {
     if (isModalOpen && selectedPayment) {
       const sourceList = isDetailView ? studentPayments : payments;
-      const updated = sourceList.find(p => p.id === (selectedPayment as any).id);
+      const updated = sourceList.find(p =>
+        p.id === (selectedPayment as any).id &&
+        (p.paymentType === selectedPayment.paymentType || p.description === selectedPayment.description)
+      );
       if (updated && (updated.status !== selectedPayment.status || updated.completedPayments !== selectedPayment.completedPayments)) {
         setSelectedPayment(updated);
       }
