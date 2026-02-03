@@ -162,12 +162,13 @@ const BranchAdminDashboard: React.FC = () => {
 
     setIsGeneratingInvoice(true);
     try {
-      // Force SINGLE_PAYMENT to avoid backend NPE on getDownPaymentAmount()
+      const paymentType = selectedStudent.paymentType === 'SINGLE' ? 'SINGLE_PAYMENT' : (selectedStudent.paymentType || 'SINGLE_PAYMENT');
+
       const payload: PaymentRequest = {
         studentId: selectedStudent.id,
         category: 'SCHOOL_FEES',
         amount: 500,
-        paymentType: 'SINGLE_PAYMENT',
+        paymentType: paymentType,
         description: 'School Fees Payment'
       };
 
