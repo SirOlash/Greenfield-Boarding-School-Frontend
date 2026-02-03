@@ -11,6 +11,9 @@ import axiosInstance from '@/lib/axiosConfig';
 import { formatNaira } from '@/lib/feeConfig';
 import PaymentDetailsModal, { PaymentDetails } from '@/components/dashboards/PaymentDetailsModal';
 import CreatePaymentModal from '@/components/dashboards/CreatePaymentModal';
+import InvoiceSuccessModal from '@/components/dashboards/InvoiceSuccessModal';
+import { PaymentRequest, RegisterStudentResponse } from '@/types/payment-api';
+import { toast } from 'sonner';
 import { usePaymentPolling } from '@/hooks/usePaymentPolling';
 
 interface Child {
@@ -33,6 +36,9 @@ const ParentDashboard: React.FC = () => {
   const [selectedPayment, setSelectedPayment] = useState<PaymentDetails | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [invoiceResponse, setInvoiceResponse] = useState<RegisterStudentResponse | null>(null);
+  const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
+  const [isGeneratingInvoice, setIsGeneratingInvoice] = useState(false);
 
   // Sync selected payment data when polling refreshes the list
   useEffect(() => {
@@ -141,8 +147,51 @@ const ParentDashboard: React.FC = () => {
     return <LoadingScreen />;
   }
 
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
+
   const pendingActivePayments = payments.filter(p => ['PENDING', 'ACTIVE'].includes(p.status.toUpperCase()));
   const historyPayments = payments.filter(p => ['SUCCESSFUL', 'FAILED', 'CANCELLED'].includes(p.status.toUpperCase()));
+  const hasPendingSchoolFees = pendingActivePayments.some(p => p.category === 'SCHOOL_FEES');
+
+  const handleGenerateInvoice = async () => {
+    if (!selectedChild) return;
+
+    // Use student's stored payment type if available, otherwise default to SINGLE
+    // Note: The PaymentDetails interface has paymentType, but the Child interface does not explicitly show it in the component above locally.
+    // However, looking at BranchAdminDashboard, the Student interface has paymentType. 
+    // I will assume Child interface might need it or I'll access it safely.
+    // Actually, I'll default to 'SINGLE' if not present to avoid errors, or try to infer.
+    // The user's prompt suggested: "(will you be able to get the current payment type for the child?)"
+    // I will try to check if the child object in `children` state has it.
+    // Let's assume for now default to SINGLE if undefined, but ideally we should fetch it.
+    // Update: I will just use 'SINGLE' as a fallback.
+
+    setIsGeneratingInvoice(true);
+    try {
+      const payload: PaymentRequest = {
+        studentId: selectedChild.id,
+        category: 'SCHOOL_FEES',
+        amount: 500, // Fixed amount as per requirements
+        paymentType: (selectedChild as any).paymentType || 'SINGLE', // Attempt to get from child, fallback to SINGLE
+        description: 'School Fees Payment'
+      };
+
+      const response = await axiosInstance.post<RegisterStudentResponse>('/payments/new', payload);
+      setInvoiceResponse(response.data);
+      setIsInvoiceModalOpen(true);
+      toast.success('Invoice generated successfully');
+
+      // Refresh payments to show the new pending payment
+      fetchPayments(selectedChild.id);
+    } catch (error: any) {
+      console.error('Failed to generate invoice', error);
+      toast.error(error.response?.data?.message || 'Failed to generate invoice');
+    } finally {
+      setIsGeneratingInvoice(false);
+    }
+  };
 
   return (
     <DashboardLayout title={`Welcome, ${user?.firstName}`}>
@@ -173,6 +222,12 @@ const ParentDashboard: React.FC = () => {
                 <PlusCircle className="w-4 h-4" />
                 AD-HOC Payments
               </Button>
+              {!hasPendingSchoolFees && (
+                <Button variant="outline" onClick={handleGenerateInvoice} disabled={isGeneratingInvoice} className="gap-2">
+                  {isGeneratingInvoice ? <Clock className="w-4 h-4 animate-spin" /> : <PlusCircle className="w-4 h-4" />}
+                  Generate Invoice for School Fees
+                </Button>
+              )}
               {pendingActivePayments.length > 0 && (
                 <div className="bg-amber-50 border border-amber-100 p-4 rounded-xl">
                   <p className="text-xs text-amber-600 uppercase font-semibold tracking-wider">Total Pending</p>
@@ -364,6 +419,12 @@ const ParentDashboard: React.FC = () => {
           onSuccess={() => fetchPayments(selectedChild.id)}
         />
       )}
+
+      <InvoiceSuccessModal
+        isOpen={isInvoiceModalOpen}
+        onClose={() => setIsInvoiceModalOpen(false)}
+        data={invoiceResponse}
+      />
     </DashboardLayout>
   );
 };

@@ -21,6 +21,9 @@ import { formatNaira } from '@/lib/feeConfig';
 import PaymentDetailsModal, { PaymentDetails } from '@/components/dashboards/PaymentDetailsModal';
 import CreatePaymentModal from '@/components/dashboards/CreatePaymentModal';
 import { usePaymentPolling } from '@/hooks/usePaymentPolling';
+import InvoiceSuccessModal from '@/components/dashboards/InvoiceSuccessModal';
+import { PaymentRequest, RegisterStudentResponse } from '@/types/payment-api';
+import { toast } from 'sonner';
 
 interface Student {
   id: number;
@@ -50,6 +53,9 @@ const BranchAdminDashboard: React.FC = () => {
   const [selectedPayment, setSelectedPayment] = useState<PaymentDetails | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [invoiceResponse, setInvoiceResponse] = useState<RegisterStudentResponse | null>(null);
+  const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
+  const [isGeneratingInvoice, setIsGeneratingInvoice] = useState(false);
 
   // Sync selected payment data when polling refreshes the list
   useEffect(() => {
@@ -149,6 +155,34 @@ const BranchAdminDashboard: React.FC = () => {
 
   const pendingActivePayments = studentPayments.filter(p => ['PENDING', 'ACTIVE'].includes(p.status.toUpperCase()));
   const historyPayments = studentPayments.filter(p => ['SUCCESSFUL', 'FAILED', 'CANCELLED'].includes(p.status.toUpperCase()));
+  const hasPendingSchoolFees = pendingActivePayments.some(p => p.category === 'SCHOOL_FEES');
+
+  const handleGenerateInvoice = async () => {
+    if (!selectedStudent) return;
+
+    setIsGeneratingInvoice(true);
+    try {
+      const payload: PaymentRequest = {
+        studentId: selectedStudent.id,
+        category: 'SCHOOL_FEES',
+        amount: 500,
+        paymentType: selectedStudent.paymentType || 'SINGLE',
+        description: 'School Fees Payment'
+      };
+
+      const response = await axiosInstance.post<RegisterStudentResponse>('/payments/new', payload);
+      setInvoiceResponse(response.data);
+      setIsInvoiceModalOpen(true);
+      toast.success('Invoice generated successfully');
+
+      fetchStudentPayments(selectedStudent.id);
+    } catch (error: any) {
+      console.error('Failed to generate invoice', error);
+      toast.error(error.response?.data?.message || 'Failed to generate invoice');
+    } finally {
+      setIsGeneratingInvoice(false);
+    }
+  };
 
   return (
     <DashboardLayout title="Branch Dashboard">
@@ -175,6 +209,12 @@ const BranchAdminDashboard: React.FC = () => {
                 <PlusCircle className="w-4 h-4" />
                 AD-HOC Payments
               </Button>
+              {!hasPendingSchoolFees && (
+                <Button variant="outline" onClick={handleGenerateInvoice} disabled={isGeneratingInvoice} className="gap-2">
+                  {isGeneratingInvoice ? <Clock className="w-4 h-4 animate-spin" /> : <PlusCircle className="w-4 h-4" />}
+                  Generate Invoice for School Fees
+                </Button>
+              )}
               {pendingActivePayments.length > 0 && (
                 <div className="bg-amber-50 border border-amber-100 p-4 rounded-xl">
                   <p className="text-2xl font-bold text-amber-700">
@@ -397,6 +437,12 @@ const BranchAdminDashboard: React.FC = () => {
           onSuccess={() => fetchStudentPayments(selectedStudent.id)}
         />
       )}
+
+      <InvoiceSuccessModal
+        isOpen={isInvoiceModalOpen}
+        onClose={() => setIsInvoiceModalOpen(false)}
+        data={invoiceResponse}
+      />
     </DashboardLayout>
   );
 };
