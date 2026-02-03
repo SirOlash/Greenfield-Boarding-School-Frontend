@@ -81,7 +81,7 @@ const ParentDashboard: React.FC = () => {
           // Use the calculated total if it's different from the record's pendingAmount
           return {
             ...child,
-            pendingAmount: total > 0 ? total : (child.pendingAmount || 0)
+            pendingAmount: total
           };
         } catch (e) {
           return child;
