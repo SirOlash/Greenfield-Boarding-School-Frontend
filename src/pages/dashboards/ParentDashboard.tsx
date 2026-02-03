@@ -170,13 +170,13 @@ const ParentDashboard: React.FC = () => {
 
     setIsGeneratingInvoice(true);
     try {
-      const paymentType = (selectedChild as any).paymentType === 'SINGLE' ? 'SINGLE_PAYMENT' : ((selectedChild as any).paymentType || 'SINGLE_PAYMENT');
-
+      // Force SINGLE_PAYMENT to avoid backend NPE on getDownPaymentAmount() when using INSTALLMENT without defined down payment
+      // This ensures the 500 fee is treated as a one-time school fee invoice.
       const payload: PaymentRequest = {
         studentId: selectedChild.id,
         category: 'SCHOOL_FEES',
         amount: 500, // Fixed amount as per requirements
-        paymentType: paymentType,
+        paymentType: 'SINGLE_PAYMENT',
         description: 'School Fees Payment'
       };
 
