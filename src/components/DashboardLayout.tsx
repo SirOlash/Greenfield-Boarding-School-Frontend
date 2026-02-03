@@ -40,8 +40,6 @@ const getNavItems = (role: UserRole): NavItem[] => {
     case 'PARENT':
       return [
         { icon: LayoutDashboard, label: 'Dashboard', href: '/parent' },
-        { icon: Users, label: 'My Children', href: '/parent/children' },
-        { icon: CreditCard, label: 'Payments', href: '/parent/payments' },
       ];
     default:
       return [];
@@ -107,8 +105,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title }) =>
                   key={item.href}
                   to={item.href}
                   className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
                     }`}
                 >
                   <item.icon className="w-5 h-5" />
@@ -169,8 +167,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title }) =>
                   to={item.href}
                   onClick={() => setSidebarOpen(false)}
                   className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
                     }`}
                 >
                   <item.icon className="w-5 h-5" />

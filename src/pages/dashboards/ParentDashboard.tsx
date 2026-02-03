@@ -18,7 +18,7 @@ interface Child {
   firstName: string;
   surname: string;
   classGrade: string;
-  status: string;
+  branchName: string;
   pendingAmount?: number;
 }
 
@@ -64,7 +64,7 @@ const ParentDashboard: React.FC = () => {
   const fetchChildren = async () => {
     try {
       const response = await axiosInstance.get<Child[]>(`/students?parentEmail=${user?.email}`);
-      console.log('API Response (Parent -> fetchChildren):', response.data);
+      // console.log('API Response (Parent -> fetchChildren):', response.data);
       const childrenData = response.data;
 
       // Fetch payments for each child to get accurate totals (consistent with detail view)
@@ -97,7 +97,7 @@ const ParentDashboard: React.FC = () => {
   const fetchPayments = async (childId: number) => {
     try {
       const response = await axiosInstance.get<PaymentDetails[]>(`/payments?studentId=${childId}`);
-      console.log('API Response (Parent -> fetchPayments):', response.data);
+      // console.log('API Response (Parent -> fetchPayments):', response.data);
       setPayments(response.data);
     } catch (error) {
       console.log('Failed to fetch payments');
@@ -294,7 +294,7 @@ const ParentDashboard: React.FC = () => {
             <h2 className="text-xl font-bold text-foreground">My Children</h2>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {children.length === 0 ? (
               <Card className="col-span-full p-12 text-center text-muted-foreground border-dashed">
                 You don't have any children registered yet.
@@ -321,8 +321,8 @@ const ParentDashboard: React.FC = () => {
 
                     <div className="mt-6 flex items-center justify-between border-t pt-4">
                       <div>
-                        <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-1">Status</p>
-                        {getStatusBadge(child.status)}
+                        <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-1">School</p>
+                        <p className="font-semibold text-foreground">{child.branchName}</p>
                       </div>
                       {child.pendingAmount !== undefined && child.pendingAmount > 0 && (
                         <div className="text-right">
