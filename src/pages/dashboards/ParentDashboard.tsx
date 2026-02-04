@@ -44,10 +44,13 @@ const ParentDashboard: React.FC = () => {
   // Sync selected payment data when polling refreshes the list
   useEffect(() => {
     if (isModalOpen && selectedPayment) {
-      const updated = payments.find(p =>
-        p.id === selectedPayment.id &&
-        (p.paymentType === selectedPayment.paymentType || p.description === selectedPayment.description)
-      );
+      const updated = payments.find(p => {
+        if (selectedPayment.onePipePaymentId && p.onePipePaymentId) {
+          return p.onePipePaymentId === selectedPayment.onePipePaymentId;
+        }
+        return p.id === selectedPayment.id &&
+          (p.paymentType === selectedPayment.paymentType || p.description === selectedPayment.description);
+      });
       if (updated && (updated.status !== selectedPayment.status || updated.completedPayments !== selectedPayment.completedPayments)) {
         setSelectedPayment(updated);
       }
