@@ -86,7 +86,22 @@ const ParentDashboard: React.FC = () => {
           const paymentsRes = await axiosInstance.get<PaymentDetails[]>(`/payments?studentId=${child.id}`);
           const total = paymentsRes.data
             .filter(p => ['PENDING', 'ACTIVE'].includes(p.status.toUpperCase()))
-            .reduce((acc, curr) => acc + (curr.paymentType?.toUpperCase() === 'INSTALLMENT' && curr.remainingAmount != null ? curr.remainingAmount : curr.amount), 0);
+            .reduce((acc, curr) => {
+              const type = curr.paymentType?.toUpperCase();
+              const status = curr.status.toUpperCase();
+
+              // If ID is subscription and active, don't add to pending total
+              if (type === 'SUBSCRIPTION' && status === 'ACTIVE') {
+                return acc;
+              }
+
+              // If installment, use remaining amount
+              if (type === 'INSTALLMENT' && curr.remainingAmount != null) {
+                return acc + curr.remainingAmount;
+              }
+
+              return acc + curr.amount;
+            }, 0);
 
           // Use the calculated total if it's different from the record's pendingAmount
           return {
@@ -238,7 +253,19 @@ const ParentDashboard: React.FC = () => {
                 <div className="bg-amber-50 border border-amber-100 p-4 rounded-xl">
                   <p className="text-xs text-amber-600 uppercase font-semibold tracking-wider">Total Pending</p>
                   <p className="text-2xl font-bold text-amber-700">
-                    {formatNaira(pendingActivePayments.reduce((acc, curr) => acc + (curr.paymentType?.toUpperCase() === 'INSTALLMENT' && curr.remainingAmount != null ? curr.remainingAmount : curr.amount), 0))}
+                    {formatNaira(pendingActivePayments.reduce((acc, curr) => {
+                      const type = curr.paymentType?.toUpperCase();
+                      const status = curr.status.toUpperCase();
+
+                      // Active subscription -> 0
+                      if (type === 'SUBSCRIPTION' && status === 'ACTIVE') return acc;
+
+                      // Installment -> remainingAmount
+                      if (type === 'INSTALLMENT' && curr.remainingAmount != null) return acc + curr.remainingAmount;
+
+                      // Default -> amount
+                      return acc + curr.amount;
+                    }, 0))}
                   </p>
                 </div>
               )}
