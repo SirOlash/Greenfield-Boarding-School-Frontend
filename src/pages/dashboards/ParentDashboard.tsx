@@ -42,6 +42,7 @@ const ParentDashboard: React.FC = () => {
   const [invoiceResponse, setInvoiceResponse] = useState<RegisterStudentResponse | null>(null);
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
   const [isGeneratingInvoice, setIsGeneratingInvoice] = useState(false);
+  const [isSwitchPlanModalOpen, setIsSwitchPlanModalOpen] = useState(false);
 
   // Sync selected payment data when polling refreshes the list
   useEffect(() => {
@@ -246,10 +247,16 @@ const ParentDashboard: React.FC = () => {
                 AD-HOC Payments
               </Button>
               {!hasPendingSchoolFees && (
-                <Button variant="outline" onClick={handleGenerateInvoice} disabled={isGeneratingInvoice} className="gap-2">
-                  {isGeneratingInvoice ? <Clock className="w-4 h-4 animate-spin" /> : <PlusCircle className="w-4 h-4" />}
-                  Generate Invoice for School Fees
-                </Button>
+                <>
+                  <Button variant="outline" onClick={() => setIsSwitchPlanModalOpen(true)} className="gap-2">
+                    <Settings className="w-4 h-4" />
+                    Switch Plan
+                  </Button>
+                  <Button variant="outline" onClick={handleGenerateInvoice} disabled={isGeneratingInvoice} className="gap-2">
+                    {isGeneratingInvoice ? <Clock className="w-4 h-4 animate-spin" /> : <PlusCircle className="w-4 h-4" />}
+                    Generate Invoice for School Fees
+                  </Button>
+                </>
               )}
               {pendingActivePayments.length > 0 && (
                 <div className="bg-amber-50 border border-amber-100 p-4 rounded-xl">
@@ -445,6 +452,17 @@ const ParentDashboard: React.FC = () => {
       />
 
       {/* Create Ad-hoc Payment Modal */}
+      {/* Switch Plan Modal */}
+      {selectedChild && (
+        <SwitchPlanModal
+          isOpen={isSwitchPlanModalOpen}
+          onClose={() => setIsSwitchPlanModalOpen(false)}
+          studentId={selectedChild.id}
+          studentName={`${selectedChild.firstName} ${selectedChild.surname}`}
+          onSuccess={() => fetchChildren()}
+        />
+      )}
+
       {selectedChild && (
         <CreatePaymentModal
           isOpen={isCreateModalOpen}
