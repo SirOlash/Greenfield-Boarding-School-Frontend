@@ -33,8 +33,8 @@ const InvoiceSuccessModal: React.FC<InvoiceSuccessModalProps> = ({ isOpen, onClo
     const isSubscription = normalizedType.includes('SUBSCRIPTION');
     const isSingle = !isInstallment && !isSubscription;
 
-    // Logic from PaymentSuccessCard: Prioritize downPayment for installments/subs
-    const displayAmount = (isInstallment || isSubscription) && downPayment !== undefined && downPayment < amount
+    // Logic from PaymentSuccessCard: Prioritize downPayment ONLY for installments
+    const displayAmount = isInstallment && downPayment !== undefined && downPayment < amount
         ? downPayment
         : amount;
 
@@ -63,7 +63,7 @@ const InvoiceSuccessModal: React.FC<InvoiceSuccessModalProps> = ({ isOpen, onClo
                     {/* Amount Display */}
                     <div className="text-center py-4 bg-secondary/50 rounded-xl border border-border">
                         <p className="text-sm text-muted-foreground mb-1">
-                            {isSingle ? 'Total Amount to Pay' : 'Initial Payment to Make'}
+                            {isSingle || isSubscription ? 'Total Amount to Pay' : 'Initial Payment to Make'}
                         </p>
                         <p className="text-3xl font-bold text-primary">
                             {formatNaira(displayAmount)}
@@ -124,6 +124,15 @@ const InvoiceSuccessModal: React.FC<InvoiceSuccessModalProps> = ({ isOpen, onClo
                                     <p className="font-medium text-destructive">
                                         {new Date(expiryDate).toLocaleDateString()} {new Date(expiryDate).toLocaleTimeString()}
                                     </p>
+                                </div>
+                            )}
+
+                            {/* Show QR Code if available */}
+                            {/* Assuming qrCodeUrl is part of paymentDetails, adding safe check */}
+                            {(paymentDetails as any).qrCodeUrl && (
+                                <div className="flex flex-col items-center justify-center p-4 bg-white rounded-lg border">
+                                    <img src={(paymentDetails as any).qrCodeUrl} alt="Payment QR Code" className="w-32 h-32 mb-2" />
+                                    <p className="text-xs text-muted-foreground">Scan QR to pay</p>
                                 </div>
                             )}
                         </div>

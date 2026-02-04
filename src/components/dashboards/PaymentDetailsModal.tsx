@@ -250,12 +250,6 @@ const PaymentDetailsModal: React.FC<PaymentDetailsModalProps> = ({ isOpen, onClo
                                     );
                                 })()}
 
-                                {payment.qrCodeUrl && (
-                                    <div className="flex flex-col items-center justify-center p-4 bg-white rounded-lg border">
-                                        <img src={payment.qrCodeUrl} alt="Payment QR Code" className="w-32 h-32 mb-2" />
-                                        <p className="text-xs text-muted-foreground">Scan QR to pay</p>
-                                    </div>
-                                )}
                             </div>
                         </div>
                     ) : (
@@ -270,6 +264,14 @@ const PaymentDetailsModal: React.FC<PaymentDetailsModalProps> = ({ isOpen, onClo
                                     <p className="font-medium">{payment.customerAccountNumber}</p>
                                 </div>
                             )}
+                        </div>
+                    )}
+
+                    {/* QR Code Display (Show if available, regardless of other details) */}
+                    {isPending && payment.qrCodeUrl && (
+                        <div className="flex flex-col items-center justify-center p-4 bg-white rounded-lg border mt-4">
+                            <img src={payment.qrCodeUrl} alt="Payment QR Code" className="w-32 h-32 mb-2" />
+                            <p className="text-xs text-muted-foreground">Scan QR to pay</p>
                         </div>
                     )}
 

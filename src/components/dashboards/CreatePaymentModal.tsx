@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { toast } from 'sonner';
 import {
     Dialog,
     DialogContent,
@@ -60,11 +61,12 @@ const CreatePaymentModal: React.FC<CreatePaymentModalProps> = ({
                 paymentType: 'SINGLE_PAYMENT',
                 description: selectedCategory?.label || 'Ad-hoc Payment'
             });
+            toast.success('Payment created successfully');
             onSuccess();
             onClose();
-        } catch (error) {
+        } catch (error: any) {
             console.error('Failed to create payment', error);
-            alert('Failed to create payment. Please try again.');
+            toast.error(error.response?.data?.message || 'Failed to create payment. Please try again.');
         } finally {
             setIsSubmitting(false);
         }

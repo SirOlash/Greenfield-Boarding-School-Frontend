@@ -23,6 +23,7 @@ interface Child {
   classGrade: string;
   branchName: string;
   pendingAmount?: number;
+  paymentType?: string;
 }
 
 const ParentDashboard: React.FC = () => {
@@ -170,7 +171,7 @@ const ParentDashboard: React.FC = () => {
 
     setIsGeneratingInvoice(true);
     try {
-      const paymentType = (selectedChild as any).paymentType === 'SINGLE' ? 'SINGLE_PAYMENT' : ((selectedChild as any).paymentType || 'SINGLE_PAYMENT');
+      const paymentType = selectedChild.paymentType === 'SINGLE' ? 'SINGLE_PAYMENT' : (selectedChild.paymentType || 'SINGLE_PAYMENT');
 
       const payload: PaymentRequest = {
         studentId: selectedChild.id,
