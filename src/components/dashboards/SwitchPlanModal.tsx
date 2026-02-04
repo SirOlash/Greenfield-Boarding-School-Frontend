@@ -31,9 +31,9 @@ const SwitchPlanModal: React.FC<SwitchPlanModalProps> = ({ isOpen, onClose, stud
         setIsSubmitting(true);
         try {
             const payload: SwitchPlanRequest = {
-                paymentType,
+                newPaymentType: paymentType,
                 bankCode: paymentType !== 'SINGLE_PAYMENT' ? bankCode : undefined,
-                accountNumber: paymentType !== 'SINGLE_PAYMENT' ? accountNumber : undefined,
+                bankAccountNumber: paymentType !== 'SINGLE_PAYMENT' ? accountNumber : undefined,
                 frequency: paymentType === 'INSTALLMENT' ? installmentFrequency : undefined,
                 numberOfInstallments: paymentType === 'INSTALLMENT' ? installmentCount : undefined,
             };

@@ -7,9 +7,9 @@ export interface PaymentRequest {
 }
 
 export interface SwitchPlanRequest {
-    paymentType: string;
+    newPaymentType: string;
     bankCode?: string;
-    accountNumber?: string;
+    bankAccountNumber?: string;
     frequency?: string;
     numberOfInstallments?: number;
 }
