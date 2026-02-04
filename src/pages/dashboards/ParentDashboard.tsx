@@ -12,9 +12,11 @@ import { formatNaira } from '@/lib/feeConfig';
 import PaymentDetailsModal, { PaymentDetails } from '@/components/dashboards/PaymentDetailsModal';
 import CreatePaymentModal from '@/components/dashboards/CreatePaymentModal';
 import InvoiceSuccessModal from '@/components/dashboards/InvoiceSuccessModal';
+import SwitchPlanModal from '@/components/dashboards/SwitchPlanModal';
 import { PaymentRequest, RegisterStudentResponse } from '@/types/payment-api';
 import { toast } from 'sonner';
 import { usePaymentPolling } from '@/hooks/usePaymentPolling';
+import { Settings } from 'lucide-react';
 
 interface Child {
   id: number;

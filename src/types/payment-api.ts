@@ -6,6 +6,14 @@ export interface PaymentRequest {
     description: string;
 }
 
+export interface SwitchPlanRequest {
+    paymentType: string;
+    bankCode?: string;
+    accountNumber?: string;
+    frequency?: string;
+    numberOfInstallments?: number;
+}
+
 export interface PaymentDetails {
     onePipePaymentId?: string;
     amount: number;
