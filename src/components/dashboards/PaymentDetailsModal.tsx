@@ -276,7 +276,7 @@ const PaymentDetailsModal: React.FC<PaymentDetailsModalProps> = ({ isOpen, onClo
                     )}
 
                     <div className="space-y-3 pt-2">
-                        {isActive && isSubscription && (
+                        {(isActive || isPending) && isSubscription && (
                             <Button
                                 variant="destructive"
                                 className="w-full gap-2"
