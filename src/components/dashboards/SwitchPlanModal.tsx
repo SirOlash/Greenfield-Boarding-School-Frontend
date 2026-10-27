@@ -5,197 +5,91 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Wallet, RefreshCw, CreditCard, Loader2, Building, AlertCircle } from 'lucide-react';
+import { Wallet, RefreshCw, CreditCard, Loader2 } from 'lucide-react';
 import axiosInstance from '@/lib/axiosConfig';
 import { toast } from 'sonner';
 import { NIGERIAN_BANKS } from '@/lib/feeConfig';
-import { SwitchPlanRequest } from '@/types/payment-api';
+import { getApiErrorMessage } from '@/lib/apiErrors';
+import { canManagePaymentPlan } from '@/lib/paymentPresentation';
+import { useAuth } from '@/contexts/AuthContext';
+import OfflineDemoNotice from '@/components/OfflineDemoNotice';
+import type { SwitchPlanRequest } from '@/types/payment-api';
 
 interface SwitchPlanModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    studentId: number;
-    studentName: string;
-    onSuccess: () => void;
+  isOpen: boolean;
+  onClose: () => void;
+  studentId: number;
+  studentName: string;
+  onSuccess: (plan: SwitchPlanRequest) => void;
 }
+const planTypes = ['SINGLE_PAYMENT', 'INSTALLMENT', 'SUBSCRIPTION'] as const;
+const frequencies = ['DAILY', 'WEEKLY', 'MONTHLY'] as const;
 
 const SwitchPlanModal: React.FC<SwitchPlanModalProps> = ({ isOpen, onClose, studentId, studentName, onSuccess }) => {
-    const [paymentType, setPaymentType] = useState<string>('SINGLE_PAYMENT');
-    const [bankCode, setBankCode] = useState<string>('');
-    const [accountNumber, setAccountNumber] = useState<string>('');
-    const [installmentFrequency, setInstallmentFrequency] = useState<string>('');
-    const [installmentCount, setInstallmentCount] = useState<number | undefined>(undefined);
-    const [isSubmitting, setIsSubmitting] = useState(false);
+  const { user } = useAuth();
+  const [paymentType, setPaymentType] = useState<SwitchPlanRequest['newPaymentType']>('SINGLE_PAYMENT');
+  const [bankCode, setBankCode] = useState('');
+  const [accountNumber, setAccountNumber] = useState('');
+  const [replaceBankDetails, setReplaceBankDetails] = useState(false);
+  const [frequency, setFrequency] = useState<SwitchPlanRequest['frequency']>();
+  const [count, setCount] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const allowed = canManagePaymentPlan(user?.role);
+  const recurring = paymentType !== 'SINGLE_PAYMENT';
+  const numberOfInstallments = Number(count);
+  const validCount = Number.isInteger(numberOfInstallments) && numberOfInstallments >= 1 && numberOfInstallments <= 10000;
+  const valid = allowed && (!recurring || (!!frequency && (!replaceBankDetails || (!!bankCode && /^\d{10}$/.test(accountNumber))))) && (paymentType !== 'INSTALLMENT' || validCount);
 
-    const handleSubmit = async () => {
-        setIsSubmitting(true);
-        try {
-            const payload: SwitchPlanRequest = {
-                newPaymentType: paymentType,
-                bankCode: paymentType !== 'SINGLE_PAYMENT' ? bankCode : undefined,
-                bankAccountNumber: paymentType !== 'SINGLE_PAYMENT' ? accountNumber : undefined,
-                frequency: paymentType === 'INSTALLMENT' ? installmentFrequency : undefined,
-                numberOfInstallments: paymentType === 'INSTALLMENT' ? installmentCount : undefined,
-            };
+  const submit = async () => {
+    if (!valid || isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const payload: SwitchPlanRequest = {
+        newPaymentType: paymentType,
+        ...(recurring ? { frequency } : {}),
+        ...(paymentType === 'INSTALLMENT' ? { numberOfInstallments } : {}),
+        ...(recurring && replaceBankDetails ? { bankCode, bankAccountNumber: accountNumber } : {}),
+      };
+      await axiosInstance.put(`/payments/students/${studentId}/switch-plan`, payload);
+      toast.success('Saved payment plan updated. No new collection was created.');
+      onSuccess(payload);
+      onClose();
+    } catch (error: unknown) {
+      toast.error(getApiErrorMessage(error, 'Unable to change this payment plan. Recurring plans need saved bank details or an explicit bank details update.'));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-            await axiosInstance.put(`/payments/students/${studentId}/switch-plan`, payload);
-            toast.success('Payment Plan updated successfully.');
-            onSuccess();
-            onClose();
-        } catch (error: any) {
-            console.error('Failed to switch plan', error);
-            toast.error(error.response?.data?.message || 'Failed to switch payment plan.');
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
-    const isFormValid = () => {
-        if (paymentType === 'SINGLE_PAYMENT') return true;
-        if (!bankCode || !accountNumber || accountNumber.length !== 10) return false;
-        if (paymentType === 'INSTALLMENT') {
-            return !!installmentFrequency && !!installmentCount;
-        }
-        return true; // Subscription
-    };
-
-    return (
-        <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                    <DialogTitle>Switch Payment Plan</DialogTitle>
-                    <DialogDescription>
-                        Change the school fees payment plan for <strong>{studentName}</strong>.
-                    </DialogDescription>
-                </DialogHeader>
-
-                <div className="space-y-6 py-2">
-                    {/* Payment Type Selection */}
-                    <RadioGroup
-                        value={paymentType}
-                        onValueChange={setPaymentType}
-                        className="space-y-2"
-                    >
-                        <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 block">
-                            Select New Plan
-                        </Label>
-
-                        {/* Single Payment */}
-                        <label className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${paymentType === 'SINGLE_PAYMENT' ? 'border-primary bg-primary/5' : 'border-border'}`}>
-                            <RadioGroupItem value="SINGLE_PAYMENT" className="mt-1" />
-                            <div>
-                                <div className="flex items-center gap-2 font-medium">
-                                    <Wallet className="w-4 h-4 text-primary" />
-                                    Single Payment
-                                </div>
-                                <p className="text-xs text-muted-foreground mt-0.5">Pay full amount at once.</p>
-                            </div>
-                        </label>
-
-                        {/* Installment */}
-                        <label className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${paymentType === 'INSTALLMENT' ? 'border-primary bg-primary/5' : 'border-border'}`}>
-                            <RadioGroupItem value="INSTALLMENT" className="mt-1" />
-                            <div>
-                                <div className="flex items-center gap-2 font-medium">
-                                    <RefreshCw className="w-4 h-4 text-primary" />
-                                    Installment Payment
-                                </div>
-                                <p className="text-xs text-muted-foreground mt-0.5">Spread payments over time.</p>
-                            </div>
-                        </label>
-
-                        {/* Subscription */}
-                        <label className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${paymentType === 'SUBSCRIPTION' ? 'border-primary bg-primary/5' : 'border-border'}`}>
-                            <RadioGroupItem value="SUBSCRIPTION" className="mt-1" />
-                            <div>
-                                <div className="flex items-center gap-2 font-medium">
-                                    <CreditCard className="w-4 h-4 text-primary" />
-                                    Subscription
-                                </div>
-                                <p className="text-xs text-muted-foreground mt-0.5">Auto-recurring payments.</p>
-                            </div>
-                        </label>
-                    </RadioGroup>
-
-                    {/* Installment Options */}
-                    {paymentType === 'INSTALLMENT' && (
-                        <div className="space-y-4 p-4 bg-muted/50 rounded-xl animate-in slide-in-from-top-2">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label>Frequency</Label>
-                                    <Select value={installmentFrequency} onValueChange={(v) => { setInstallmentFrequency(v); setInstallmentCount(undefined); }}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="WEEKLY">Weekly</SelectItem>
-                                            <SelectItem value="MONTHLY">Monthly</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label>Duration</Label>
-                                    <Select value={installmentCount?.toString()} onValueChange={(v) => setInstallmentCount(parseInt(v))}>
-                                        <SelectTrigger disabled={!installmentFrequency}>
-                                            <SelectValue placeholder="Count" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {installmentFrequency === 'WEEKLY'
-                                                ? Array.from({ length: 12 }, (_, i) => i + 1).map(num => <SelectItem key={num} value={num.toString()}>{num} Weeks</SelectItem>)
-                                                : Array.from({ length: 3 }, (_, i) => i + 1).map(num => <SelectItem key={num} value={num.toString()}>{num} Months</SelectItem>)
-                                            }
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Bank Details logic: Required for Installment/Subscription */}
-                    {paymentType !== 'SINGLE_PAYMENT' && (
-                        <div className="space-y-4 pt-2 border-t mt-4 animate-in slide-in-from-top-2">
-                            <div className="flex gap-3 p-3 bg-amber-50 rounded-lg border border-amber-100 text-amber-800 text-xs">
-                                <AlertCircle className="w-4 h-4 shrink-0" />
-                                <p>Bank details required for automatic debit mandate.</p>
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label>Bank Name</Label>
-                                <Select value={bankCode} onValueChange={setBankCode}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select your bank" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {NIGERIAN_BANKS.map((bank) => (
-                                            <SelectItem key={bank.code} value={bank.code}>{bank.name}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label>Account Number</Label>
-                                <Input
-                                    value={accountNumber}
-                                    onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                                    placeholder="10-digit account number"
-                                    maxLength={10}
-                                />
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                <DialogFooter>
-                    <Button variant="outline" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
-                    <Button onClick={handleSubmit} disabled={!isFormValid() || isSubmitting}>
-                        {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                        Confirm Switch
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    );
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogHeader><DialogTitle>Switch Payment Plan</DialogTitle><DialogDescription>Change the saved school fees plan for <strong>{studentName}</strong>. Existing pending or active school-fee plans prevent this change.</DialogDescription></DialogHeader>
+        <div className="space-y-5 py-2">
+          <OfflineDemoNotice />
+          {!allowed && <p role="alert" className="text-destructive text-sm">Only the authenticated parent who owns this child may change the payment plan.</p>}
+          <RadioGroup value={paymentType} onValueChange={(value) => { const type = planTypes.find((item) => item === value); if (type) setPaymentType(type); }} className="space-y-2">
+            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Select New Plan</Label>
+            <label className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer ${paymentType === 'SINGLE_PAYMENT' ? 'border-primary bg-primary/5' : 'border-border'}`}><RadioGroupItem value="SINGLE_PAYMENT" className="mt-1" /><div><div className="flex items-center gap-2 font-medium"><Wallet className="w-4 h-4 text-primary" />Single Payment</div><p className="text-xs text-muted-foreground mt-0.5">One finite school-fee obligation.</p></div></label>
+            <label className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer ${paymentType === 'INSTALLMENT' ? 'border-primary bg-primary/5' : 'border-border'}`}><RadioGroupItem value="INSTALLMENT" className="mt-1" /><div><div className="flex items-center gap-2 font-medium"><RefreshCw className="w-4 h-4 text-primary" />Installment Payment</div><p className="text-xs text-muted-foreground mt-0.5">Down payment followed by a finite exact schedule.</p></div></label>
+            <label className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer ${paymentType === 'SUBSCRIPTION' ? 'border-primary bg-primary/5' : 'border-border'}`}><RadioGroupItem value="SUBSCRIPTION" className="mt-1" /><div><div className="flex items-center gap-2 font-medium"><CreditCard className="w-4 h-4 text-primary" />Subscription</div><p className="text-xs text-muted-foreground mt-0.5">Charge per cycle, unlimited until cancellation; no automatic debit in this demo.</p></div></label>
+          </RadioGroup>
+          {recurring && <div className="space-y-4 p-4 bg-muted/50 rounded-xl">
+            <div className="space-y-2"><Label htmlFor="switch-frequency">Frequency</Label><Select value={frequency} onValueChange={(value) => setFrequency(frequencies.find((item) => item === value))}><SelectTrigger id="switch-frequency"><SelectValue placeholder="Select frequency" /></SelectTrigger><SelectContent>{frequencies.map((value) => <SelectItem key={value} value={value}>{value.toLowerCase()}</SelectItem>)}</SelectContent></Select></div>
+            {paymentType === 'INSTALLMENT' && <div className="space-y-2"><Label htmlFor="switch-count">Installment count (after down payment)</Label><Input id="switch-count" type="number" min={1} max={10000} step={1} value={count} onChange={(event) => setCount(event.target.value)} /></div>}
+            <p className="text-xs text-muted-foreground">School fees and exact invoice amounts are controlled by the backend.</p>
+            <label className="flex gap-2 items-start text-sm"><input type="checkbox" checked={replaceBankDetails} onChange={(event) => setReplaceBankDetails(event.target.checked)} className="mt-1" />Explicitly replace my saved demonstration bank details</label>
+            <p className="text-xs text-muted-foreground">Otherwise your existing parent bank details are preserved. Use synthetic demonstration data only.</p>
+            {replaceBankDetails && <div className="space-y-3 border-t pt-3">
+              <p className="text-xs text-amber-800">This updates your own parent record and can affect future recurring invoices for your children.</p>
+              <div className="space-y-2"><Label htmlFor="switch-bank">Demo bank</Label><Select value={bankCode} onValueChange={setBankCode}><SelectTrigger id="switch-bank"><SelectValue placeholder="Select demo bank" /></SelectTrigger><SelectContent>{NIGERIAN_BANKS.map((bank) => <SelectItem key={bank.code} value={bank.code}>{bank.name}</SelectItem>)}</SelectContent></Select></div>
+              <div className="space-y-2"><Label htmlFor="switch-account">Synthetic account number</Label><Input id="switch-account" value={accountNumber} onChange={(event) => setAccountNumber(event.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="10 synthetic digits" maxLength={10} /></div>
+            </div>}
+          </div>}
+        </div>
+        <DialogFooter><Button variant="outline" onClick={onClose} disabled={isSubmitting}>Cancel</Button><Button onClick={submit} disabled={!valid || isSubmitting}>{isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Confirm Switch</Button></DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 };
-
 export default SwitchPlanModal;

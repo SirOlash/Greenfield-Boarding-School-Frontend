@@ -4,67 +4,28 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { RegistrationData } from '../RegistrationWizard';
+import type { RegistrationData } from '@/lib/registration';
+import { validateParentDetails } from '@/lib/registration';
+import type { Title } from '@/types/payment-api';
 
 interface ParentDetailsStepProps {
   data: Partial<RegistrationData>;
   onUpdate: (data: Partial<RegistrationData>) => void;
   onNext: () => void;
   onBack: () => void;
+  existingParent: boolean;
 }
 
-const TITLES = ['MR', 'MRS', 'MS', 'DR', 'CHIEF', 'ENGR', 'PROF', 'BARR'];
+const TITLES: Title[] = ['MR', 'MRS', 'MS', 'DR', 'CHIEF', 'ENGR', 'PROF', 'BARR'];
 
 const ParentDetailsStep: React.FC<ParentDetailsStepProps> = ({
-  data,
-  onUpdate,
-  onNext,
-  onBack,
+  data, onUpdate, onNext, onBack, existingParent,
 }) => {
   const [errors, setErrors] = useState<Record<string, string>>({});
-
-  const validateEmail = (email: string) => {
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return re.test(email);
-  };
-
-  const validatePhone = (phone: string) => {
-    // Nigerian phone number validation
-    const re = /^(0[789][01]\d{8}|234[789][01]\d{8})$/;
-    return re.test(phone.replace(/\s/g, ''));
-  };
-
-  const validate = () => {
-    const newErrors: Record<string, string> = {};
-
-    if (!data.parentTitle) newErrors.parentTitle = 'Title is required';
-    if (!data.parentFirstName?.trim()) newErrors.parentFirstName = 'First name is required';
-    if (!data.parentSurname?.trim()) newErrors.parentSurname = 'Surname is required';
-
-    if (!data.parentEmail?.trim()) {
-      newErrors.parentEmail = 'Email is required';
-    } else if (!validateEmail(data.parentEmail)) {
-      newErrors.parentEmail = 'Please enter a valid email';
-    }
-
-    if (!data.parentPhoneNumber?.trim()) {
-      newErrors.parentPhoneNumber = 'Phone number is required';
-    } else if (!validatePhone(data.parentPhoneNumber)) {
-      newErrors.parentPhoneNumber = 'Please enter a valid Nigerian phone number';
-    }
-
-    if (!data.parentPassword || data.parentPassword.length < 8) {
-      newErrors.parentPassword = 'Password must be at least 8 characters';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
   const handleNext = () => {
-    if (validate()) {
-      onNext();
-    }
+    const validation = validateParentDetails(data, existingParent);
+    setErrors(validation);
+    if (!Object.keys(validation).length) onNext();
   };
 
   return (
@@ -74,132 +35,78 @@ const ParentDetailsStep: React.FC<ParentDetailsStepProps> = ({
           <Users className="w-7 h-7 text-primary" />
         </div>
         <h2 className="text-2xl font-bold text-foreground">Parent / Guardian Details</h2>
-        <p className="text-muted-foreground mt-2">Contact information for account access and notifications</p>
+        <p className="text-muted-foreground mt-2">
+          {existingParent ? 'Confirm the details for your signed-in parent account' : 'Create your demonstration parent account'}
+        </p>
       </div>
-
+      {existingParent && (
+        <p className="p-4 bg-secondary rounded-xl text-sm">
+          Your saved parent profile will be reused. Enter the phone number already on your account exactly;
+          registration does not change your profile or banking details.
+        </p>
+      )}
       <div className="space-y-4">
-        {/* Title & Names Row */}
-        <div className="grid grid-cols-12 gap-4">
-          <div className="col-span-12 md:col-span-4 space-y-2">
-            <Label>Title</Label>
-            <Select
-              value={data.parentTitle}
-              onValueChange={(value) => onUpdate({ parentTitle: value })}
-            >
-              <SelectTrigger className={errors.parentTitle ? 'border-destructive' : ''}>
+        {!existingParent && (
+          <div className="space-y-2">
+            <Label htmlFor="parentTitle">Title</Label>
+            <Select value={data.parentTitle} onValueChange={(value: Title) => onUpdate({ parentTitle: value })}>
+              <SelectTrigger id="parentTitle" className={errors.parentTitle ? 'border-destructive' : ''}>
                 <SelectValue placeholder="Title" />
               </SelectTrigger>
-              <SelectContent>
-                {TITLES.map((title) => (
-                  <SelectItem key={title} value={title}>
-                    {title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
+              <SelectContent>{TITLES.map((title) => <SelectItem key={title} value={title}>{title}</SelectItem>)}</SelectContent>
             </Select>
             {errors.parentTitle && <p className="text-xs text-destructive">{errors.parentTitle}</p>}
           </div>
-        </div>
-
+        )}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="firstName" className="flex items-center gap-2">
-              <User className="w-4 h-4" />
-              First Name
-            </Label>
-            <Input
-              id="firstName"
-              value={data.parentFirstName || ''}
-              onChange={(e) => onUpdate({ parentFirstName: e.target.value })}
-              placeholder="e.g. John"
-              className={errors.parentFirstName ? 'border-destructive' : ''}
-            />
+            <Label htmlFor="parentFirstName" className="flex items-center gap-2"><User className="w-4 h-4" />First Name</Label>
+            <Input id="parentFirstName" value={data.parentFirstName || ''} maxLength={255}
+              onChange={(event) => onUpdate({ parentFirstName: event.target.value })}
+              placeholder="Parent first name" className={errors.parentFirstName ? 'border-destructive' : ''} />
             {errors.parentFirstName && <p className="text-xs text-destructive">{errors.parentFirstName}</p>}
           </div>
-
           <div className="space-y-2">
-            <Label htmlFor="surname" className="flex items-center gap-2">
-              <User className="w-4 h-4" />
-              Surname
-            </Label>
-            <Input
-              id="surname"
-              value={data.parentSurname || ''}
-              onChange={(e) => onUpdate({ parentSurname: e.target.value })}
-              placeholder="e.g. Doe"
-              className={errors.parentSurname ? 'border-destructive' : ''}
-            />
+            <Label htmlFor="parentSurname">Surname</Label>
+            <Input id="parentSurname" value={data.parentSurname || ''} maxLength={255}
+              onChange={(event) => onUpdate({ parentSurname: event.target.value })}
+              placeholder="Parent surname" className={errors.parentSurname ? 'border-destructive' : ''} />
             {errors.parentSurname && <p className="text-xs text-destructive">{errors.parentSurname}</p>}
           </div>
         </div>
-
-        {/* Email */}
         <div className="space-y-2">
-          <Label htmlFor="email" className="flex items-center gap-2">
-            <Mail className="w-4 h-4" />
-            Email Address
-          </Label>
-          <Input
-            id="email"
-            type="email"
-            value={data.parentEmail || ''}
-            onChange={(e) => onUpdate({ parentEmail: e.target.value })}
-            placeholder="parent@example.com"
-            className={errors.parentEmail ? 'border-destructive' : ''}
-          />
+          <Label htmlFor="parentEmail" className="flex items-center gap-2"><Mail className="w-4 h-4" />Email Address</Label>
+          <Input id="parentEmail" type="email" value={data.parentEmail || ''} readOnly={existingParent}
+            maxLength={255} onChange={(event) => onUpdate({ parentEmail: event.target.value })}
+            placeholder="parent@example.invalid" className={errors.parentEmail ? 'border-destructive' : ''} />
+          {existingParent && <p className="text-xs text-muted-foreground">Bound to the authenticated parent account.</p>}
           {errors.parentEmail && <p className="text-xs text-destructive">{errors.parentEmail}</p>}
         </div>
-
-        {/* Password */}
+        {!existingParent && (
+          <div className="space-y-2">
+            <Label htmlFor="parentPassword">Password</Label>
+            <Input id="parentPassword" type="password" autoComplete="new-password"
+              value={data.parentPassword || ''} onChange={(event) => onUpdate({ parentPassword: event.target.value })}
+              placeholder="Create a private password" className={errors.parentPassword ? 'border-destructive' : ''} />
+            {errors.parentPassword && <p className="text-xs text-destructive">{errors.parentPassword}</p>}
+          </div>
+        )}
         <div className="space-y-2">
-          <Label htmlFor="password">Password</Label>
-          <Input
-            id="password"
-            type="password"
-            value={data.parentPassword || ''}
-            onChange={(e) => onUpdate({ parentPassword: e.target.value })}
-            placeholder="Create a password"
-            className={errors.parentPassword ? 'border-destructive' : ''}
-          />
-          {errors.parentPassword && <p className="text-xs text-destructive">{errors.parentPassword}</p>}
+          <Label htmlFor="parentPhoneNumber" className="flex items-center gap-2"><Phone className="w-4 h-4" />Phone Number</Label>
+          <Input id="parentPhoneNumber" type="tel" maxLength={255} value={data.parentPhoneNumber || ''}
+            onChange={(event) => onUpdate({ parentPhoneNumber: event.target.value })}
+            placeholder={existingParent ? 'Phone number saved on your account' : 'Demonstration phone number'}
+            className={errors.parentPhoneNumber ? 'border-destructive' : ''} />
+          {errors.parentPhoneNumber && <p className="text-xs text-destructive">{errors.parentPhoneNumber}</p>}
         </div>
-
-        {/* Phone Number */}
-        <div className="space-y-2">
-          <Label htmlFor="phone" className="flex items-center gap-2">
-            <Phone className="w-4 h-4" />
-            Phone Number
-          </Label>
-          <Input
-            id="phone"
-            type="tel"
-            value={data.parentPhoneNumber || ''}
-            onChange={(e) => onUpdate({ parentPhoneNumber: e.target.value })}
-            placeholder="08012345678"
-            className={errors.parentPhoneNumber ? 'border-destructive' : ''}
-          />
-          {errors.parentPhoneNumber && (
-            <p className="text-xs text-destructive">{errors.parentPhoneNumber}</p>
-          )}
-        </div>
-
-        {/* Info Box */}
-        <div className="p-4 bg-greenfield-50 rounded-xl border border-greenfield-200">
-          <p className="text-sm text-foreground">
-            <strong>Note:</strong> Payment details will be sent to your email, SMS, and WhatsApp.
-            Make sure the contact information is correct.
-          </p>
+        <div className="p-4 bg-greenfield-50 rounded-xl border border-greenfield-200 text-sm">
+          Use synthetic personal details for this offline demonstration. Registration creates a student and mock invoice;
+          it does not confirm a payment or send real financial instructions.
         </div>
       </div>
-
       <div className="flex gap-3">
-        <Button variant="outline" onClick={onBack} className="flex-1">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back
-        </Button>
-        <Button onClick={handleNext} className="flex-1 shadow-button">
-          Continue to Payment
-        </Button>
+        <Button variant="outline" onClick={onBack} className="flex-1"><ArrowLeft className="w-4 h-4 mr-2" />Back</Button>
+        <Button onClick={handleNext} className="flex-1 shadow-button">Continue to Payment</Button>
       </div>
     </div>
   );

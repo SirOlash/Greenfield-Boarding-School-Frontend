@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Building2, Users, CreditCard, TrendingUp, Plus, Trash2, MapPin, Mail } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Building2, Users, CreditCard, TrendingUp, Plus, MapPin, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -9,20 +9,10 @@ import DashboardLayout from '@/components/DashboardLayout';
 import LoadingScreen from '@/components/LoadingScreen';
 import axiosInstance from '@/lib/axiosConfig';
 import { formatNaira } from '@/lib/feeConfig';
-import { PaymentDetails } from '@/components/dashboards/PaymentDetailsModal';
-
-interface Branch {
-  id: number;
-  businessName: string;
-  branchCode: string;
-  billerCode: string;
-  address: string;
-  adminEmail: string;
-  phoneNumber: string;
-  contactPersonName: string;
-  studentCount?: number;
-  totalPayments?: number;
-}
+import { Branch, BranchPaymentDto, DashboardStats } from '@/types/payment-api';
+import { normalizeBranchPayment, summarizePayments } from '@/lib/paymentPresentation';
+import { getApiErrorMessage } from '@/lib/apiErrors';
+import { toast } from 'sonner';
 
 interface BranchFormData {
   adminEmail: string;
@@ -40,17 +30,11 @@ interface BranchFormData {
   settlementBankCode: string;
 }
 
-interface DashboardStats {
-  totalBranches: string;
-  totalStudents: string;
-  totalRevenue: number;
-  activePayments: string;
-}
-
 const SuperAdminDashboard: React.FC = () => {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [payments, setPayments] = useState<PaymentDetails[]>([]);
+  const [branchSummaries, setBranchSummaries] = useState<Record<number, ReturnType<typeof summarizePayments>>>({});
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [formData, setFormData] = useState<BranchFormData>({
@@ -69,65 +53,40 @@ const SuperAdminDashboard: React.FC = () => {
     settlementBankCode: '',
   });
 
-  useEffect(() => {
-    Promise.all([fetchBranches(), fetchStats(), fetchPayments()]).finally(() => setIsLoading(false));
+  const fetchData = useCallback(async () => {
+    try {
+      const [branchResponse, statsResponse] = await Promise.all([
+        axiosInstance.get<Branch[]>('/branches'),
+        axiosInstance.get<DashboardStats>('/super-admin/stats'),
+      ]);
+      setBranches(branchResponse.data);
+      setStats(statsResponse.data);
+      const summaries = await Promise.all(branchResponse.data.map(async branch => {
+        try {
+          // There is no unfiltered GET /payments contract. Super administrators
+          // may read each authorized branch, whose response uses `type`.
+          const response = await axiosInstance.get<BranchPaymentDto[]>(`/payments?branchId=${branch.id}`);
+          return [branch.id, summarizePayments(response.data.map(normalizeBranchPayment))] as const;
+        } catch {
+          return [branch.id, { confirmedAmount: null, remainingAmount: null, unknownCount: 1, subscriptionCount: 0 }] as const;
+        }
+      }));
+      setBranchSummaries(Object.fromEntries(summaries));
+      setLoadError(null);
+    } catch (error: unknown) {
+      setLoadError(getApiErrorMessage(error, 'Unable to load the administrative dashboard.'));
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  const fetchStats = async () => {
-    try {
-      const response = await axiosInstance.get<DashboardStats>('/super-admin/stats');
-      setStats(response.data);
-    } catch (error) {
-      console.error('Failed to fetch stats');
-    }
-  };
-
-  const fetchBranches = async () => {
-    try {
-      const response = await axiosInstance.get<Branch[]>('/branches');
-      setBranches(response.data);
-    } catch (error) {
-      console.error('Failed to fetch branches');
-      setBranches([]);
-    }
-  };
-
-  const fetchPayments = async () => {
-    try {
-      const response = await axiosInstance.get<PaymentDetails[]>('/payments');
-      setPayments(response.data);
-    } catch (error) {
-      console.error('Failed to fetch payments');
-      setPayments([]);
-    }
-  };
-
-  const calculateTotalRevenue = () => {
-    const baseRevenue = stats?.totalRevenue || 0;
-    const additionalRevenue = payments.reduce((acc, payment) => {
-      const status = payment.status?.toUpperCase();
-      const type = payment.paymentType?.toUpperCase();
-
-      if (status === 'ACTIVE') {
-        if (type === 'INSTALLMENT') {
-          return acc + (payment.downPayment || 0);
-        } else if (type === 'SUBSCRIPTION') {
-          // For subscriptions, add the first payment amount
-          return acc + (payment.amount || 0);
-        }
-      }
-      return acc;
-    }, 0);
-
-    return baseRevenue + additionalRevenue;
-  };
-
+  useEffect(() => { void fetchData(); }, [fetchData]);
   const handleCreateBranch = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     try {
       await axiosInstance.post('/branches', formData);
-      await fetchBranches();
+      await fetchData();
       setIsDialogOpen(false);
       setFormData({
         adminEmail: '',
@@ -144,22 +103,10 @@ const SuperAdminDashboard: React.FC = () => {
         settlementAccountNumber: '',
         settlementBankCode: '',
       });
-    } catch (error: any) {
-      alert(error.response?.data?.message || 'Failed to create branch');
+    } catch (error: unknown) {
+      toast.error(getApiErrorMessage(error, 'Failed to create branch'));
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleDeleteBranch = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this branch? This action cannot be undone.')) {
-      return;
-    }
-    try {
-      await axiosInstance.delete(`/branches/${id}`);
-      await fetchBranches();
-    } catch (error: any) {
-      alert(error.response?.data?.message || 'Failed to delete branch');
     }
   };
 
@@ -169,6 +116,7 @@ const SuperAdminDashboard: React.FC = () => {
 
   return (
     <DashboardLayout title="Super Admin Dashboard">
+      {loadError && <p role="alert" className="mb-4 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm">{loadError}</p>}
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <Card className="shadow-card">
@@ -176,7 +124,7 @@ const SuperAdminDashboard: React.FC = () => {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Total Branches</p>
-                <p className="text-2xl font-bold text-foreground mt-1">{stats?.totalBranches || '0'}</p>
+                <p className="text-2xl font-bold text-foreground mt-1">{stats?.totalBranches ?? 'Unknown'}</p>
               </div>
               <div className="w-12 h-12 bg-secondary rounded-xl flex items-center justify-center">
                 <Building2 className="w-6 h-6 text-primary" />
@@ -190,7 +138,7 @@ const SuperAdminDashboard: React.FC = () => {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Total Students</p>
-                <p className="text-2xl font-bold text-foreground mt-1">{stats?.totalStudents || '0'}</p>
+                <p className="text-2xl font-bold text-foreground mt-1">{stats?.totalStudents ?? 'Unknown'}</p>
               </div>
               <div className="w-12 h-12 bg-secondary rounded-xl flex items-center justify-center">
                 <Users className="w-6 h-6 text-primary" />
@@ -203,8 +151,8 @@ const SuperAdminDashboard: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Total Revenue</p>
-                <p className="text-2xl font-bold text-foreground mt-1">{formatNaira(calculateTotalRevenue())}</p>
+                <p className="text-sm text-muted-foreground">Confirmed Collections</p>
+                <p className="text-2xl font-bold text-foreground mt-1">{formatNaira(stats?.totalRevenue ?? null)}</p>
               </div>
               <div className="w-12 h-12 bg-secondary rounded-xl flex items-center justify-center">
                 <CreditCard className="w-6 h-6 text-primary" />
@@ -217,8 +165,8 @@ const SuperAdminDashboard: React.FC = () => {
           <CardContent className="p-6">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Active Payments</p>
-                <p className="text-2xl font-bold text-foreground mt-1">{stats?.activePayments || '0'}</p>
+                <p className="text-sm text-muted-foreground">Active Plans</p>
+                <p className="text-2xl font-bold text-foreground mt-1">{stats?.activePayments ?? 'Unknown'}</p>
               </div>
               <div className="w-12 h-12 bg-secondary rounded-xl flex items-center justify-center">
                 <TrendingUp className="w-6 h-6 text-primary" />
@@ -402,28 +350,14 @@ const SuperAdminDashboard: React.FC = () => {
                         Contact: {branch.contactPersonName}
                       </span>
                     </div>
-                    {(branch.studentCount !== undefined || branch.totalPayments !== undefined) && (
-                      <div className="flex gap-4 mt-2 text-sm">
-                        {branch.studentCount !== undefined && (
-                          <span className="text-primary font-medium">
-                            {branch.studentCount} students
-                          </span>
-                        )}
-                        {branch.totalPayments !== undefined && (
-                          <span className="text-foreground font-medium">
-                            {formatNaira(branch.totalPayments)} collected
-                          </span>
-                        )}
-                      </div>
-                    )}
+                    <div className="flex flex-wrap gap-4 mt-2 text-sm">
+                      <span className="text-primary font-medium">Confirmed collections: {formatNaira(branchSummaries[branch.id]?.confirmedAmount ?? null)}</span>
+                      <span className="text-foreground font-medium">Outstanding finite balances: {formatNaira(branchSummaries[branch.id]?.remainingAmount ?? null)}</span>
+                    </div>
+                    {(branchSummaries[branch.id]?.unknownCount ?? 0) > 0 && <p className="text-xs text-muted-foreground mt-1">Some balances lack verified accounting evidence.</p>}
+                    {(branchSummaries[branch.id]?.subscriptionCount ?? 0) > 0 && <p className="text-xs text-muted-foreground mt-1">Unlimited subscriptions have no finite remaining balance.</p>}
                   </div>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleDeleteBranch(branch.id)}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+
                 </div>
               ))
             )}

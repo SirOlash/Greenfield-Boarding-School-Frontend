@@ -37,7 +37,7 @@ const Navbar: React.FC = () => {
             <div className="w-10 h-10 bg-gradient-hero rounded-xl flex items-center justify-center shadow-button">
               <GraduationCap className="w-6 h-6 text-primary-foreground" />
             </div>
-            <span className="text-xl font-bold text-gradient">Greenfield</span>
+            <span className="text-xl font-bold text-gradient">Greenfield</span><span className="rounded bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-950">OFFLINE DEMO</span>
           </Link>
 
           {/* Desktop Navigation */}
