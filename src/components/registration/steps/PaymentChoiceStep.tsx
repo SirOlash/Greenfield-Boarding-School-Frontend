@@ -5,8 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { RegistrationData } from '../RegistrationWizard';
+import type { RegistrationData } from '@/lib/registration';
+import { validateRegistrationPayment } from '@/lib/registration';
 import { formatNaira, NIGERIAN_BANKS, calculateInstallment } from '@/lib/feeConfig';
+import type { Frequency, PaymentType } from '@/types/payment-api';
 
 interface PaymentChoiceStepProps {
   data: Partial<RegistrationData>;
@@ -15,62 +17,24 @@ interface PaymentChoiceStepProps {
   onBack: () => void;
   selectedFee: number;
   installmentDetails: ReturnType<typeof calculateInstallment> | null;
+  existingParent: boolean;
 }
 
+const choices: { value: PaymentType; title: string; description: string; icon: typeof Wallet }[] = [
+  { value: 'SINGLE_PAYMENT', title: 'Single Payment', description: 'One invoice for the full school fee. No real transfer is supported in this demo.', icon: Wallet },
+  { value: 'INSTALLMENT', title: 'Installment Payment', description: 'A 20% down payment and a finite schedule of daily, weekly or monthly installments.', icon: RefreshCw },
+  { value: 'SUBSCRIPTION', title: 'Subscription', description: 'An unlimited subscription charging the full invoice amount per selected cycle, until cancelled. No automatic debit occurs in mock mode.', icon: CreditCard },
+];
+
 const PaymentChoiceStep: React.FC<PaymentChoiceStepProps> = ({
-  data,
-  onUpdate,
-  onSubmit,
-  onBack,
-  selectedFee,
-  installmentDetails,
+  data, onUpdate, onSubmit, onBack, selectedFee, installmentDetails, existingParent,
 }) => {
   const [errors, setErrors] = useState<Record<string, string>>({});
-
-  const validate = () => {
-    const newErrors: Record<string, string> = {};
-
-    if (!data.paymentType) {
-      newErrors.paymentType = 'Please select a payment option';
-    }
-
-    if (data.paymentType === 'INSTALLMENT') {
-      if (!data.installmentFrequency) {
-        newErrors.installmentFrequency = 'Please select payment frequency';
-      }
-      if (!data.installmentCount) {
-        newErrors.installmentCount = 'Please select duration';
-      }
-    }
-
-    if (data.paymentType !== 'SINGLE_PAYMENT') {
-      if (!data.bankAccountNumber?.trim()) {
-        newErrors.bankAccountNumber = 'Bank account number is required';
-      } else if (!/^\d{10}$/.test(data.bankAccountNumber)) {
-        newErrors.bankAccountNumber = 'Please enter a valid 10-digit account number';
-      }
-
-      if (!data.bankCode) {
-        newErrors.bankCode = 'Please select your bank';
-      }
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
   const handleSubmit = () => {
-    if (validate()) {
-      onSubmit();
-    }
+    const validation = validateRegistrationPayment(data, existingParent);
+    setErrors(validation);
+    if (!Object.keys(validation).length) onSubmit();
   };
-
-  const getInstallmentPreview = () => {
-    if (!data.installmentFrequency || !selectedFee) return null;
-    return calculateInstallment(selectedFee, data.installmentFrequency, data.installmentCount);
-  };
-
-  const preview = getInstallmentPreview();
 
   return (
     <div className="space-y-6">
@@ -79,218 +43,107 @@ const PaymentChoiceStep: React.FC<PaymentChoiceStepProps> = ({
           <CreditCard className="w-7 h-7 text-primary" />
         </div>
         <h2 className="text-2xl font-bold text-foreground">Payment Options</h2>
-        <p className="text-muted-foreground mt-2">Choose how you'd like to pay the school fees</p>
+        <p className="text-muted-foreground mt-2">Choose demonstration school-fee terms</p>
       </div>
-
-      {/* Total Amount Display */}
       <div className="p-4 bg-secondary rounded-xl text-center">
-        <p className="text-sm text-muted-foreground">Total School Fee</p>
+        <p className="text-sm text-muted-foreground">Synthetic school-fee preview</p>
         <p className="text-3xl font-bold text-primary">{formatNaira(selectedFee)}</p>
+        <p className="text-xs text-muted-foreground mt-1">The backend determines the final invoice amount and payment terms.</p>
       </div>
-
       <div className="space-y-4">
-        {/* Payment Type Selection */}
-        <RadioGroup
-          value={data.paymentType}
-          onValueChange={(value) => onUpdate({
-            paymentType: value as RegistrationData['paymentType'],
-          })}
-          className="space-y-3"
-        >
-          {/* Single Payment */}
-          <label
-            className={`flex items-start gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${data.paymentType === 'SINGLE_PAYMENT'
-              ? 'border-primary bg-primary/5'
-              : 'border-border hover:border-primary/50'
-              }`}
-          >
-            <RadioGroupItem value="SINGLE_PAYMENT" className="mt-1" />
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <Wallet className="w-5 h-5 text-primary" />
-                <span className="font-semibold">Single Payment</span>
+        <RadioGroup value={data.paymentType} className="space-y-3"
+          onValueChange={(value: PaymentType) => {
+            setErrors({});
+            onUpdate({ paymentType: value, frequency: undefined, numberOfInstallments: undefined });
+          }}>
+          {choices.map(({ value, title, description, icon: Icon }) => (
+            <label key={value} className={`flex items-start gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${data.paymentType === value ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`}>
+              <RadioGroupItem value={value} className="mt-1" />
+              <div className="flex-1">
+                <div className="flex items-center gap-2"><Icon className="w-5 h-5 text-primary" /><span className="font-semibold">{title}</span></div>
+                <p className="text-sm text-muted-foreground mt-1">{description}</p>
               </div>
-              <p className="text-sm text-muted-foreground mt-1">
-                Pay the full amount at once via bank transfer
-              </p>
-              <p className="text-lg font-bold text-primary mt-2">{formatNaira(selectedFee)}</p>
-            </div>
-          </label>
-
-          {/* Installment Payment */}
-          <label
-            className={`flex items-start gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${data.paymentType === 'INSTALLMENT'
-              ? 'border-primary bg-primary/5'
-              : 'border-border hover:border-primary/50'
-              }`}
-          >
-            <RadioGroupItem value="INSTALLMENT" className="mt-1" />
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <RefreshCw className="w-5 h-5 text-primary" />
-                <span className="font-semibold">Installment Payment</span>
-              </div>
-              <p className="text-sm text-muted-foreground mt-1">
-                20% down payment, rest in weekly or monthly installments
-              </p>
-            </div>
-          </label>
-
-          {/* Subscription Payment */}
-          <label
-            className={`flex items-start gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${data.paymentType === 'SUBSCRIPTION'
-              ? 'border-primary bg-primary/5'
-              : 'border-border hover:border-primary/50'
-              }`}
-          >
-            <RadioGroupItem value="SUBSCRIPTION" className="mt-1" />
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <CreditCard className="w-5 h-5 text-primary" />
-                <span className="font-semibold">Subscription</span>
-              </div>
-              <p className="text-sm text-muted-foreground mt-1">
-                Recurring monthly payments automatically debited
-              </p>
-            </div>
-          </label>
+            </label>
+          ))}
         </RadioGroup>
         {errors.paymentType && <p className="text-xs text-destructive">{errors.paymentType}</p>}
-
-        {/* Installment Frequency Selection */}
-        {data.paymentType === 'INSTALLMENT' && (
+        {data.paymentType !== 'SINGLE_PAYMENT' && (
           <div className="space-y-4 p-4 bg-muted rounded-xl animate-slide-in">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Payment Frequency</Label>
-                <Select
-                  value={data.installmentFrequency}
-                  onValueChange={(value) => onUpdate({
-                    installmentFrequency: value as 'WEEKLY' | 'MONTHLY',
-                    installmentCount: undefined // Reset count when frequency changes
-                  })}
-                >
-                  <SelectTrigger className={errors.installmentFrequency ? 'border-destructive' : ''}>
-                    <SelectValue placeholder="Select frequency" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="WEEKLY">Weekly</SelectItem>
-                    <SelectItem value="MONTHLY">Monthly</SelectItem>
-                  </SelectContent>
-                </Select>
-                {errors.installmentFrequency && (
-                  <p className="text-xs text-destructive">{errors.installmentFrequency}</p>
-                )}
-              </div>
-
-              {/* Number of Installments */}
-              {data.installmentFrequency && (
-                <div className="space-y-2">
-                  <Label>How many {data.installmentFrequency === 'WEEKLY' ? 'weeks' : 'months'}?</Label>
-                  <Select
-                    value={data.installmentCount?.toString()}
-                    onValueChange={(value) => onUpdate({ installmentCount: parseInt(value) })}
-                  >
-                    <SelectTrigger className={errors.installmentCount ? 'border-destructive' : ''}>
-                      <SelectValue placeholder="Duration" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {data.installmentFrequency === 'WEEKLY'
-                        ? Array.from({ length: 12 }, (_, i) => i + 1).map(num => (
-                          <SelectItem key={num} value={num.toString()}>{num} Week{num > 1 ? 's' : ''}</SelectItem>
-                        ))
-                        : Array.from({ length: 3 }, (_, i) => i + 1).map(num => (
-                          <SelectItem key={num} value={num.toString()}>{num} Month{num > 1 ? 's' : ''}</SelectItem>
-                        ))
-                      }
-                    </SelectContent>
-                  </Select>
-                  {errors.installmentCount && (
-                    <p className="text-xs text-destructive">{errors.installmentCount}</p>
-                  )}
-                </div>
-              )}
+            <div className="space-y-2">
+              <Label htmlFor="frequency">Recurring frequency</Label>
+              <Select value={data.frequency ?? ''} onValueChange={(value: Frequency) => onUpdate({ frequency: value })}>
+                <SelectTrigger id="frequency" className={errors.frequency ? 'border-destructive' : ''}><SelectValue placeholder="Select frequency" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="DAILY">Daily</SelectItem><SelectItem value="WEEKLY">Weekly</SelectItem><SelectItem value="MONTHLY">Monthly</SelectItem>
+                </SelectContent>
+              </Select>
+              {errors.frequency && <p className="text-xs text-destructive">{errors.frequency}</p>}
             </div>
-
-            {/* Installment Preview */}
-            {preview && (
+            {data.paymentType === 'INSTALLMENT' && (
+              <div className="space-y-2">
+                <Label htmlFor="numberOfInstallments">Number of installments after the down payment</Label>
+                <Input id="numberOfInstallments" type="number" min={1} max={10000} step={1}
+                  value={data.numberOfInstallments ?? ''}
+                  onChange={(event) => onUpdate({ numberOfInstallments: event.target.value ? Number(event.target.value) : undefined })}
+                  className={errors.numberOfInstallments ? 'border-destructive' : ''} />
+                {errors.numberOfInstallments && <p className="text-xs text-destructive">{errors.numberOfInstallments}</p>}
+              </div>
+            )}
+            {data.paymentType === 'SUBSCRIPTION' && (
+              <p className="text-sm">
+                Preview: {formatNaira(selectedFee)} per selected cycle, starting one interval after creation, with no automatic end date.
+                An unlimited subscription has no finite remaining balance.
+              </p>
+            )}
+            {data.paymentType === 'INSTALLMENT' && installmentDetails && (
               <div className="space-y-2 p-3 bg-card rounded-lg border">
-                <p className="text-sm font-medium">Payment Breakdown:</p>
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <span className="text-muted-foreground">Down Payment (20%):</span>
-                  <span className="font-semibold text-primary">{formatNaira(preview.downPayment)}</span>
-                  <span className="text-muted-foreground">Per {preview.frequency === 'WEEKLY' ? 'Week' : 'Month'}:</span>
-                  <span className="font-semibold">{formatNaira(preview.amountPerPayment)}</span>
-                  <span className="text-muted-foreground">Number of Payments:</span>
-                  <span className="font-semibold">{preview.numberOfPayments}</span>
+                <p className="text-sm font-medium">Estimated schedule — final terms come from the backend</p>
+                <p className="text-sm">Down payment (20%): <strong>{formatNaira(installmentDetails.downPayment)}</strong></p>
+                <ol className="max-h-52 overflow-y-auto text-sm space-y-1">
+                  {installmentDetails.installmentAmounts.map((amount, index) => (
+                    <li key={index}>Installment {index + 1}{index === installmentDetails.installmentAmounts.length - 1 ? ' (final)' : ''}: {formatNaira(amount)}</li>
+                  ))}
+                </ol>
+                <p className="text-xs text-muted-foreground">Kobo rounding is distributed exactly as in the documented backend schedule; the final installment may differ.</p>
+              </div>
+            )}
+            {existingParent ? (
+              <p className="text-sm p-3 bg-card rounded-lg border">
+                The backend reuses your saved banking configuration for recurring plans. This form never replaces it.
+                If no configuration is saved, select a single payment; the frontend has no bank-profile update endpoint.
+              </p>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-start gap-2 p-3 bg-amber-50 rounded-lg border border-amber-200">
+                  <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                  <p className="text-sm text-amber-800">Synthetic demonstration banking details only. No debit, mandate activation or transfer occurs. Do not enter real bank information.</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="bankCode" className="flex items-center gap-2"><Building className="w-4 h-4" />Demonstration bank</Label>
+                  <Select value={data.bankCode ?? ''} onValueChange={(value) => onUpdate({ bankCode: value })}>
+                    <SelectTrigger id="bankCode" className={errors.bankCode ? 'border-destructive' : ''}><SelectValue placeholder="Select demonstration bank" /></SelectTrigger>
+                    <SelectContent>{NIGERIAN_BANKS.map((bank) => <SelectItem key={bank.code} value={bank.code}>{bank.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                  {errors.bankCode && <p className="text-xs text-destructive">{errors.bankCode}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="bankAccountNumber">Synthetic account number</Label>
+                  <Input id="bankAccountNumber" inputMode="numeric" maxLength={10}
+                    value={data.bankAccountNumber ?? ''} placeholder="0000000000"
+                    onChange={(event) => onUpdate({ bankAccountNumber: event.target.value.replace(/\D/g, '').slice(0, 10) })}
+                    className={errors.bankAccountNumber ? 'border-destructive' : ''} />
+                  {errors.bankAccountNumber && <p className="text-xs text-destructive">{errors.bankAccountNumber}</p>}
                 </div>
               </div>
             )}
           </div>
         )}
-
-        {/* Bank Details for Installment/Subscription */}
-        {data.paymentType && data.paymentType !== 'SINGLE_PAYMENT' && (
-          <div className="space-y-4 p-4 bg-muted rounded-xl animate-slide-in">
-            <div className="flex items-start gap-2 p-3 bg-amber-50 rounded-lg border border-amber-200">
-              <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-              <p className="text-sm text-amber-800">
-                Your bank account details are required to set up automatic debit (mandate) for future payments.
-                You'll first make a transfer to activate the mandate.
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <Building className="w-4 h-4" />
-                Select Your Bank
-              </Label>
-              <Select
-                value={data.bankCode}
-                onValueChange={(value) => onUpdate({ bankCode: value })}
-              >
-                <SelectTrigger className={errors.bankCode ? 'border-destructive' : ''}>
-                  <SelectValue placeholder="Select bank" />
-                </SelectTrigger>
-                <SelectContent>
-                  {NIGERIAN_BANKS.map((bank) => (
-                    <SelectItem key={bank.code} value={bank.code}>
-                      {bank.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.bankCode && <p className="text-xs text-destructive">{errors.bankCode}</p>}
-            </div>
-
-            <div className="space-y-2">
-              <Label>Account Number</Label>
-              <Input
-                type="text"
-                value={data.bankAccountNumber || ''}
-                onChange={(e) => onUpdate({ bankAccountNumber: e.target.value.replace(/\D/g, '').slice(0, 10) })}
-                placeholder="Enter 10-digit account number"
-                maxLength={10}
-                className={errors.bankAccountNumber ? 'border-destructive' : ''}
-              />
-              {errors.bankAccountNumber && (
-                <p className="text-xs text-destructive">{errors.bankAccountNumber}</p>
-              )}
-            </div>
-          </div>
-        )}
       </div>
-
       <div className="flex gap-3">
-        <Button variant="outline" onClick={onBack} className="flex-1">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back
-        </Button>
-        <Button onClick={handleSubmit} className="flex-1 shadow-button">
-          Complete Registration
-        </Button>
+        <Button variant="outline" onClick={onBack} className="flex-1"><ArrowLeft className="w-4 h-4 mr-2" />Back</Button>
+        <Button onClick={handleSubmit} className="flex-1 shadow-button">Complete Registration</Button>
       </div>
-    </div >
+    </div>
   );
 };
 
