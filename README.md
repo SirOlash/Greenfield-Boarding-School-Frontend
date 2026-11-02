@@ -1,13 +1,44 @@
-# Greenfield frontend — offline school payments demonstration
+# Greenfield — School Payments Frontend
 
-This existing React/TypeScript interface is aligned with the Java 17 / Spring Boot
-backend at commit `bb90ac6b59734b54a089bde816138c5a6d8efa6a` on
-`fix/secure-demo-config`. Frontend Task 10 is on `fix/backend-api-alignment`.
+**React + TypeScript + Vite frontend for Greenfield**, an individual full-stack
+school-fee payment integration project built during the OnePipe Emerging Talent
+Accelerator. I developed the frontend and Java/Spring Boot backend, integrated
+OnePipe APIs and deployed a working internship demonstration.
 
-Greenfield is an internship prototype. All invoices and account details are
-synthetic. **Do not transfer money or enter real bank details.** Creating an
-invoice, refreshing a dashboard or querying a payment never confirms a payment.
-There is no public simulation or payment-success control.
+> **Not originally a mock-only app.** The original internship build connected to
+> OnePipe using temporary credentials and exercised real API/transfer testing,
+> payment callbacks and notification/reminder workflows. These were demonstrated
+> integration flows—not evidence of production use by real schools.
+
+> **Current version:** When the internship's provider environment and integration
+> credentials were cancelled/revoked, I adapted Greenfield to an **offline
+> portfolio demo**. The frontend now works with the backend's synthetic invoice
+> adapter and simulated payment ledger. **No real money is transferred, no actual
+> bank account is created, and payment notifications/reminders are not claimed
+> as active delivery features today.** Never transfer money to demo account
+> strings or enter real bank details.
+
+## Project journey
+
+| Original OnePipe integration (historical) | Current reproducible demo |
+| --- | --- |
+| Onboarding and school-fee flows backed by actual OnePipe API calls and transfer tests | School fees and invoices generated locally via the mock provider |
+| Payment notifications/callbacks and reminder workflows demonstrated | Backend rejects unverified real webhooks; confirmed collections are simulated and protected by a database ledger |
+| Deployed working internship prototype | Local full-stack demo; public deployment must be configured separately |
+
+The React UI provides parent/student registration, branch selection, role-aware
+dashboards, payment-plan selection, exact installment previews, invoices, account
+expiry and payment history. It distinguishes **planned fees from confirmed
+simulated collections** and avoids misleading success or transfer instructions.
+
+**Backend:** [Greenfield Spring Boot API](https://github.com/SirOlash/OnepipePWAIntegrationProject)
+— see its README for the project history, architecture, security model, API
+endpoints and Flyway/PostgreSQL setup.
+
+This frontend is aligned with the backend's
+`fix/secure-demo-config` branch. Its integration updates live on
+`fix/backend-api-alignment` until merged. It does not expose a public
+payment-confirmation button or a live provider integration.
 
 ## Local development
 
@@ -35,7 +66,9 @@ signing keys, provider credentials, database passwords or other secrets there.
 The application still stores the logged-in bearer token using its existing
 localStorage mechanism and adds it through the Axios request interceptor.
 
-No OnePipe credentials, live bank service, deployment or new dependency is needed.
+No OnePipe credentials or live bank service is needed to reproduce the
+**current mock-mode** interface. Original real integration tests were performed
+during the internship and cannot be replayed with revoked credentials.
 Some existing fonts/hero images use external asset URLs; offline payment mode
 does not mean every visual asset is bundled locally.
 
@@ -111,6 +144,14 @@ queries remain available; the frontend hides parent financial actions.
   409/state conflicts prompt refresh and do not optimistically mutate balances.
 - Expected 400/401/403/404/409 errors have consistent guidance. Unexpected server
   failures use a generic safe message, without displaying raw exception text.
+
+## Features demonstrated
+
+- Parent registration (including authenticated registration of additional children).
+- Separate parent, branch-admin and super-admin views governed by backend permissions.
+- Server-authoritative fees, two-decimal NGN formatting and exact installment terms.
+- Distinction between pending invoices, verified *simulated* collections, unknown balances and unlimited subscription cycles.
+- Safe mock-account notices, expiry display and read-only reconciliation diagnostics.
 
 ## Verification
 
