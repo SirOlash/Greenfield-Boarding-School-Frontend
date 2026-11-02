@@ -6,8 +6,8 @@ Accelerator. I developed the frontend and Java/Spring Boot backend, integrated
 OnePipe APIs and deployed a working internship demonstration.
 
 > **Not originally a mock-only app.** The original internship build connected to
-> OnePipe using temporary credentials and exercised real API/transfer testing,
-> payment callbacks and notification/reminder workflows. These were demonstrated
+> OnePipe using temporary credentials, executed real transfer transactions during
+> integration testing, and exercised payment callbacks and notification/reminder workflows. These were demonstrated
 > integration flows—not evidence of production use by real schools.
 
 > **Current version:** When the internship's provider environment and integration
@@ -22,7 +22,7 @@ OnePipe APIs and deployed a working internship demonstration.
 
 | Original OnePipe integration (historical) | Current reproducible demo |
 | --- | --- |
-| Onboarding and school-fee flows backed by actual OnePipe API calls and transfer tests | School fees and invoices generated locally via the mock provider |
+| Onboarding and school-fee flows backed by real OnePipe API calls and transfer transactions during testing | School fees and invoices generated locally via the mock provider |
 | Payment notifications/callbacks and reminder workflows demonstrated | Backend rejects unverified real webhooks; confirmed collections are simulated and protected by a database ledger |
 | Deployed working internship prototype | Local full-stack demo; public deployment must be configured separately |
 
