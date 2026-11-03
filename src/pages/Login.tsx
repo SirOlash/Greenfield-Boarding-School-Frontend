@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { GraduationCap, Mail, Lock, LogIn, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,18 +8,12 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import axiosInstance from '@/lib/axiosConfig';
 import LoadingScreen from '@/components/LoadingScreen';
-import axios from 'axios';
-
-interface LoginResponse {
-  token: string;
-  role: 'SUPER_ADMIN' | 'BRANCH_ADMIN' | 'PARENT';
-  branchId?: number;
-  firstName: string;
-  email?: string;
-}
+import { getApiErrorMessage } from '@/lib/apiErrors';
+import type { LoginResponse } from '@/types/payment-api';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -29,7 +23,7 @@ const Login: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // setError('');
+    setError('');
     setIsLoading(true);
 
     try {
@@ -57,13 +51,13 @@ const Login: React.FC = () => {
           navigate('/branch-admin');
           break;
         case 'PARENT':
-          navigate('/parent');
+          navigate(searchParams.get('returnTo') === '/register' ? '/register' : '/parent');
           break;
         default:
           navigate('/');
       }
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Invalid email or password');
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, 'Sign-in failed. Check your credentials and try again.'));
     } finally {
       setIsLoading(false);
     }

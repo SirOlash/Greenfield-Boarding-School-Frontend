@@ -4,8 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { RegistrationData } from '../RegistrationWizard';
-import { CLASS_GRADES, formatNaira, SCHOOL_FEES } from '@/lib/feeConfig';
+import type { RegistrationData } from '@/lib/registration';
+import { validateStudentDetails } from '@/lib/registration';
+import { getApiErrorMessage } from '@/lib/apiErrors';
+import { CLASS_GRADES, formatNaira, SCHOOL_FEES, type ClassGrade } from '@/lib/feeConfig';
 import axiosInstance from '@/lib/axiosConfig';
 
 interface Branch {
@@ -14,16 +16,12 @@ interface Branch {
   address: string;
 }
 
-// Hardcoded branch for demo - will be replaced when real branches are created
-const DEMO_BRANCHES: Branch[] = [
-  { id: 1, businessName: 'Greenfield Main Campus', address: 'Victoria Island, Lagos' },
-];
-
 interface StudentDetailsStepProps {
   data: Partial<RegistrationData>;
   onUpdate: (data: Partial<RegistrationData>) => void;
   onNext: () => void;
   selectedFee: number;
+  onBranchesLoaded: (ids: number[]) => void;
 }
 
 const StudentDetailsStep: React.FC<StudentDetailsStepProps> = ({
@@ -31,39 +29,39 @@ const StudentDetailsStep: React.FC<StudentDetailsStepProps> = ({
   onUpdate,
   onNext,
   selectedFee,
+  onBranchesLoaded,
 }) => {
-  const [branches, setBranches] = useState<Branch[]>(DEMO_BRANCHES);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [branchError, setBranchError] = useState('');
+  const [loadingBranches, setLoadingBranches] = useState(true);
+  const [retry, setRetry] = useState(0);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    // Fetch branches from API
-    const fetchBranches = async () => {
-      try {
-        const response = await axiosInstance.get<Branch[]>('/branches');
-        if (response.data.length > 0) {
-          setBranches(response.data);
-        }
-      } catch (error) {
-        // Use demo branches if API fails
-        console.log('Using demo branches');
-      }
-    };
-    fetchBranches();
-  }, []);
+    let active = true;
+    setLoadingBranches(true);
+    setBranchError('');
+    setBranches([]);
+    onBranchesLoaded([]);
+    axiosInstance.get<Branch[]>('/branches')
+      .then((response) => {
+        if (!active) return;
+        setBranches(response.data);
+        onBranchesLoaded(response.data.map((branch) => branch.id));
+        if (!response.data.length) setBranchError('No school branches are available. Contact the school before registering.');
+      })
+      .catch((error: unknown) => {
+        if (active) setBranchError(getApiErrorMessage(error, 'School branches could not be loaded. Retry before continuing.'));
+      })
+      .finally(() => { if (active) setLoadingBranches(false); });
+    return () => { active = false; };
+  }, [onBranchesLoaded, retry]);
 
   const validate = () => {
-    const newErrors: Record<string, string> = {};
-    
-    if (!data.branchId) newErrors.branchId = 'Please select a branch';
-    if (!data.firstName?.trim()) newErrors.firstName = 'First name is required';
-    if (!data.surname?.trim()) newErrors.surname = 'Surname is required';
-    if (!data.dateOfBirth) newErrors.dateOfBirth = 'Date of birth is required';
-    if (!data.classGrade) newErrors.classGrade = 'Please select a class';
-
+    const newErrors = validateStudentDetails(data, branches.map((branch) => branch.id));
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-
   const handleNext = () => {
     if (validate()) {
       onNext();
@@ -88,10 +86,11 @@ const StudentDetailsStep: React.FC<StudentDetailsStepProps> = ({
             School Branch
           </Label>
           <Select
-            value={data.branchId?.toString()}
+            value={data.branchId ? data.branchId.toString() : ''}
+            disabled={loadingBranches || !branches.length}
             onValueChange={(value) => onUpdate({ branchId: parseInt(value) })}
           >
-            <SelectTrigger className={errors.branchId ? 'border-destructive' : ''}>
+            <SelectTrigger id="branch" className={errors.branchId ? 'border-destructive' : ''}>
               <SelectValue placeholder="Select a branch" />
             </SelectTrigger>
             <SelectContent>
@@ -102,6 +101,8 @@ const StudentDetailsStep: React.FC<StudentDetailsStepProps> = ({
               ))}
             </SelectContent>
           </Select>
+          {branchError && <p role="alert" className="text-sm text-destructive">{branchError}</p>}
+          {branchError && <Button variant="outline" size="sm" onClick={() => setRetry((value) => value + 1)}>Retry branches</Button>}
           {errors.branchId && <p className="text-xs text-destructive">{errors.branchId}</p>}
         </div>
 
@@ -159,7 +160,7 @@ const StudentDetailsStep: React.FC<StudentDetailsStepProps> = ({
           </Label>
           <Select
             value={data.classGrade}
-            onValueChange={(value) => onUpdate({ classGrade: value })}
+            onValueChange={(value: ClassGrade) => onUpdate({ classGrade: value })}
           >
             <SelectTrigger className={errors.classGrade ? 'border-destructive' : ''}>
               <SelectValue placeholder="Select class" />
@@ -178,13 +179,14 @@ const StudentDetailsStep: React.FC<StudentDetailsStepProps> = ({
         {/* Fee Display */}
         {selectedFee > 0 && (
           <div className="p-4 bg-secondary rounded-xl border border-primary/20">
-            <p className="text-sm text-muted-foreground">School Fee for {data.classGrade}</p>
+            <p className="text-sm text-muted-foreground">Synthetic fee preview for {data.classGrade}</p>
             <p className="text-2xl font-bold text-primary">{formatNaira(selectedFee)}</p>
+            <p className="text-xs text-muted-foreground mt-1">The backend sets the final fee and returns the invoice terms.</p>
           </div>
         )}
       </div>
 
-      <Button onClick={handleNext} className="w-full shadow-button">
+      <Button onClick={handleNext} disabled={loadingBranches || !branches.length} className="w-full shadow-button">
         Continue to Parent Details
       </Button>
     </div>

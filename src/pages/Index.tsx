@@ -4,6 +4,7 @@ import { GraduationCap, Users, Shield, ArrowRight, CheckCircle } from 'lucide-re
 import { Button } from '@/components/ui/button';
 import Navbar from '@/components/Navbar';
 import HeroSlider from '@/components/HeroSlider';
+import OfflineDemoNotice from '@/components/OfflineDemoNotice';
 
 const features = [
   {
@@ -26,9 +27,9 @@ const features = [
 const benefits = [
   'Easy online registration process',
   'Flexible payment options including installments',
-  'Secure virtual payment accounts',
-  'Real-time payment tracking for parents',
-  'SMS, Email & WhatsApp notifications',
+  'Synthetic demo account metadata',
+  'Ledger-based simulated payment tracking',
+  'Offline invoice and payment-plan demonstration',
 ];
 
 const Index: React.FC = () => {
@@ -44,7 +45,7 @@ const Index: React.FC = () => {
         <div className="container mx-auto px-4">
           <div className="bg-card rounded-2xl shadow-elevated p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
             <div>
-              <h2 className="text-xl md:text-2xl font-bold text-foreground">
+              <div className="mb-4"><OfflineDemoNotice /></div><h2 className="text-xl md:text-2xl font-bold text-foreground">
                 Ready to Enroll Your Child?
               </h2>
               <p className="text-muted-foreground mt-1">
@@ -99,8 +100,8 @@ const Index: React.FC = () => {
                 Simplified Payment Experience
               </h2>
               <p className="text-muted-foreground mb-8">
-                Our digital platform makes paying school fees easier than ever.
-                Register your child and get a virtual account instantly.
+                Explore school-fee plans in this internship prototype.
+                Use synthetic registration details to view an offline demonstration invoice.
               </p>
 
               <ul className="space-y-4">

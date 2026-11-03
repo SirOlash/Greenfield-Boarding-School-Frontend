@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth, UserRole } from '@/contexts/AuthContext';
+import OfflineDemoNotice from '@/components/OfflineDemoNotice';
 
 interface NavItem {
   icon: React.ElementType;
@@ -205,7 +206,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title }) =>
         </header>
 
         {/* Page Content */}
-        <main className="p-4 lg:p-6">{children}</main>
+        <main className="p-4 lg:p-6"><OfflineDemoNotice />{children}</main>
       </div>
     </div>
   );
