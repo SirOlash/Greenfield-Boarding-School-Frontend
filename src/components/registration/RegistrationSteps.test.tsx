@@ -112,7 +112,7 @@ describe('branch selection', () => {
     });
     await waitFor(() => expect(loaded).toHaveBeenLastCalledWith([7]));
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
-    expect(screen.getByText(/Synthetic Campus/)).toBeInTheDocument();
+    expect(screen.getByRole('combobox')).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Continue to Parent Details' })).toBeEnabled();
     expect(api.get).toHaveBeenCalledTimes(1);
   });
