@@ -24,7 +24,7 @@ OnePipe APIs and deployed a working internship demonstration.
 | --- | --- |
 | Onboarding and school-fee flows backed by real OnePipe API calls and transfer transactions during testing | School fees and invoices generated locally via the mock provider |
 | Payment notifications/callbacks and reminder workflows demonstrated | Backend rejects unverified real webhooks; confirmed collections are simulated and protected by a database ledger |
-| Deployed working internship prototype | Local full-stack demo; public deployment must be configured separately |
+| Deployed working internship prototype | Public mock-only portfolio demo hosted on Vercel, Render and Neon (free backend may sleep when idle) |
 
 The React UI provides parent/student registration, branch selection, role-aware
 dashboards, payment-plan selection, exact installment previews, invoices, account
@@ -35,10 +35,31 @@ simulated collections** and avoids misleading success or transfer instructions.
 — see its README for the project history, architecture, security model, API
 endpoints and Flyway/PostgreSQL setup.
 
-This frontend is aligned with the backend's
-`fix/secure-demo-config` branch. Its integration updates live on
-`fix/backend-api-alignment` until merged. It does not expose a public
-payment-confirmation button or a live provider integration.
+This frontend is aligned with the secured backend now merged into `main`.
+It does not expose a public payment-confirmation button or a live provider
+integration.
+
+## Live portfolio demo and cold starts
+
+- **Frontend:** https://greenfieldboardingschool.vercel.app
+- **Hosted backend:** https://greenfield-backend-lkse.onrender.com (API base includes `/api`)
+- **Database:** Neon PostgreSQL, initialized with the backend's Flyway migrations.
+- **Production configuration:** Vercel sets `VITE_API_BASE_URL=https://greenfield-backend-lkse.onrender.com/api`;
+  the backend explicitly allows the Vercel production origin through CORS.
+
+The backend uses Render's **free** web service, which spins down after about
+15 minutes without inbound traffic. The next HTTP request wakes it up; startup
+can take around a minute (see [Render's free-tier documentation](https://render.com/docs/free)).
+Clicking **Enroll Now** or visiting `/register` starts the existing
+`GET /api/branches` request automatically. While it is pending, registration
+shows a loading indicator and disables progression; if the request fails, use
+**Retry branches** after a moment. You should not need to open the Render backend
+URL separately. There is no background keep-alive, and the frontend never
+invented or cached a fake branch to hide a failure.
+
+The live deployment is a **portfolio demonstration**, not an operational school
+or a real payment service. Use fictional people and synthetic banking details
+only. No actual transfers, debits or payment confirmations are performed.
 
 ## Local development
 
