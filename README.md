@@ -186,9 +186,12 @@ node node_modules/typescript/bin/tsc -p tsconfig.app.json --noEmit
 Vitest covers currency precision, unknown/unlimited balances, exact installment
 progress, registration validation and HTTP payloads, role-specific controls,
 query/cancellation behavior, conflict messages, JWT interception and offline
-notices. API tests use typed mocks; they do not claim a live deployment or a
-browser-to-backend end-to-end run. See [the Task 10 review](docs/task10-review.md)
-for the file manifest, final command results and pre-existing lint findings.
+notices. Automated API tests use typed mocks; they are not browser-to-backend
+end-to-end tests. Separately, the deployed frontend/backend have passed a manual
+live smoke check: administrator login, synthetic single-payment parent/student
+registration, parent login and invoice display. This is not a full production
+acceptance test. See [the Task 10 review](docs/task10-review.md) for the earlier
+file manifest, command results and pre-existing lint findings.
 
 ## Remaining limits
 
@@ -206,6 +209,6 @@ provider identifiers; student-detail responses supply the available detail.
 
 Use the backend in mock mode. No endpoint discovers provider mode for this UI.
 Real provider verification, trusted bank reconciliation, automatic charges,
-contact verification, rate limiting, restrictive deployment CORS and token
-revocation remain backend/environment work. This task neither implements nor
+contact verification, rate limiting and token revocation remain future work.
+The hosted backend's exact-origin CORS policy is configured for the live frontend. This task neither implements nor
 publishes the backend's controlled development simulation in the frontend.
