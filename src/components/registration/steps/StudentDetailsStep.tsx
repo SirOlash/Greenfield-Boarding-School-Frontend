@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { GraduationCap, User, Calendar, Building2 } from 'lucide-react';
+import { GraduationCap, User, Calendar, Building2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -85,24 +85,45 @@ const StudentDetailsStep: React.FC<StudentDetailsStepProps> = ({
             <Building2 className="w-4 h-4" />
             School Branch
           </Label>
-          <Select
-            value={data.branchId ? data.branchId.toString() : ''}
-            disabled={loadingBranches || !branches.length}
-            onValueChange={(value) => onUpdate({ branchId: parseInt(value) })}
-          >
-            <SelectTrigger id="branch" className={errors.branchId ? 'border-destructive' : ''}>
-              <SelectValue placeholder="Select a branch" />
-            </SelectTrigger>
-            <SelectContent>
-              {branches.map((branch) => (
-                <SelectItem key={branch.id} value={branch.id.toString()}>
-                  {branch.businessName} - {branch.address}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {loadingBranches ? (
+            <div role="status" aria-live="polite" className="flex items-start gap-3 rounded-lg border border-primary/20 bg-secondary p-4">
+              <Loader2 aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 animate-spin text-primary" />
+              <div>
+                <p className="text-sm font-medium">Loading school branches...</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Our free demo backend may take about a minute to wake after inactivity.
+                  Please wait; there is no need to open the backend website separately.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <Select
+              value={data.branchId ? data.branchId.toString() : ''}
+              disabled={!branches.length}
+              onValueChange={(value) => onUpdate({ branchId: parseInt(value) })}
+            >
+              <SelectTrigger id="branch" className={errors.branchId ? 'border-destructive' : ''}>
+                <SelectValue placeholder="Select a branch" />
+              </SelectTrigger>
+              <SelectContent>
+                {branches.map((branch) => (
+                  <SelectItem key={branch.id} value={branch.id.toString()}>
+                    {branch.businessName} - {branch.address}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           {branchError && <p role="alert" className="text-sm text-destructive">{branchError}</p>}
-          {branchError && <Button variant="outline" size="sm" onClick={() => setRetry((value) => value + 1)}>Retry branches</Button>}
+          {branchError && (
+            <>
+              <p className="text-xs text-muted-foreground">
+                The free demo server may still be starting. Retry here after a moment;
+                you do not need to visit the backend URL directly.
+              </p>
+              <Button variant="outline" size="sm" onClick={() => setRetry((value) => value + 1)}>Retry branches</Button>
+            </>
+          )}
           {errors.branchId && <p className="text-xs text-destructive">{errors.branchId}</p>}
         </div>
 
