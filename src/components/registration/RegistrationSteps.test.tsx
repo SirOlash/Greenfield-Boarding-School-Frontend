@@ -1,6 +1,6 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import ParentDetailsStep from './steps/ParentDetailsStep';
 import PaymentChoiceStep from './steps/PaymentChoiceStep';
 import StudentDetailsStep from './steps/StudentDetailsStep';
@@ -95,6 +95,28 @@ describe('recurring registration presentation', () => {
 });
 
 describe('branch selection', () => {
+  it('shows the cold-start loading state while the initial branch request is pending', async () => {
+    let finishRequest: ((response: unknown) => void) | undefined;
+    api.get.mockImplementationOnce(() => new Promise((resolve) => { finishRequest = resolve; }));
+    const loaded = vi.fn();
+    render(<StudentDetailsStep data={data} onUpdate={vi.fn()} onNext={vi.fn()}
+      selectedFee={100000} onBranchesLoaded={loaded} />);
+
+    expect(api.get).toHaveBeenCalledWith('/branches');
+    expect(screen.getByRole('status')).toHaveTextContent(/may take about a minute to wake/i);
+    expect(screen.getByRole('button', { name: 'Continue to Parent Details' })).toBeDisabled();
+    expect(screen.queryByText(/Synthetic Campus/)).not.toBeInTheDocument();
+
+    await act(async () => {
+      finishRequest?.({ data: [{ id: 7, businessName: 'Synthetic Campus', address: 'Demo address' }] });
+    });
+    await waitFor(() => expect(loaded).toHaveBeenLastCalledWith([7]));
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(screen.getByText(/Synthetic Campus/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Continue to Parent Details' })).toBeEnabled();
+    expect(api.get).toHaveBeenCalledTimes(1);
+  });
+
   it('blocks registration when branches fail to load and supports retry without a made-up branch', async () => {
     api.get.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce({
       data: [{ id: 7, businessName: 'Synthetic Campus', address: 'Demo address' }],
